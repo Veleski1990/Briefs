@@ -162,7 +162,7 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
         <div>
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-4xl font-black tracking-tight leading-none">
+              <h1 className="font-heading text-5xl tracking-tight leading-none">
                 <span className="text-gray-900">{firstName} </span>
                 <span className="text-[#4f1c1e]">{rest.join(' ')}</span>
               </h1>

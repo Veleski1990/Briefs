@@ -93,7 +93,7 @@ export default async function DashboardPage() {
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#efff72]/70">
             Creative AI Media
           </p>
-          <h1 className="text-2xl font-bold text-white">Brief Dashboard</h1>
+          <h1 className="font-heading text-4xl text-white">Brief Dashboard</h1>
           <p className="mt-1 text-sm text-white/60">
             All submitted editor briefs — {briefs.length} total
           </p>
@@ -216,12 +216,6 @@ export default async function DashboardPage() {
             className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 hover:border-gray-400 transition-colors"
           >
             Content Calendar
-          </Link>
-          <Link
-            href="/shoot-prep"
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 hover:border-gray-400 transition-colors"
-          >
-            Shoot Prep
           </Link>
         </div>
 

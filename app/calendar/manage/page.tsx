@@ -146,7 +146,7 @@ export default function CalendarManagePage() {
           <div className="flex items-start justify-between">
             <div>
               <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#efff72]/70">Creative AI Media</p>
-              <h1 className="text-2xl font-bold text-white">Content Calendar</h1>
+              <h1 className="font-heading text-4xl text-white">Content Calendar</h1>
               <p className="mt-1 text-sm text-white/60">Manage posts and send to clients for approval.</p>
             </div>
             <div className="flex gap-2 pt-1">

@@ -15,7 +15,7 @@ export const CLIENTS = [
   'SITE LOCK SECURITY',
 ] as const
 
-export const PLATFORMS = ['INSTAGRAM', 'TIKTOK', 'LINKEDLN', 'YOUTUBE'] as const
+export const PLATFORMS = ['INSTAGRAM', 'TIKTOK', 'FACEBOOK', 'LINKEDLN', 'YOUTUBE'] as const
 
 export const VIDEO_FORMATS = [
   'REEL',

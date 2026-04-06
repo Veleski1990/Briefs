@@ -26,7 +26,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-body)', 'DM Sans', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-heading)', 'Bebas Neue', 'sans-serif'],
       },
     },
   },

@@ -229,7 +229,7 @@ export default function BriefPage() {
               <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-brand-accent">
                 Creative AI Media
               </p>
-              <h1 className="text-2xl font-bold text-brand-offwhite">Editor Brief</h1>
+              <h1 className="font-heading text-4xl text-brand-offwhite">Editor Brief</h1>
               <p className="mt-1 text-sm text-brand-offwhite opacity-80">
                 Fill in the details below and submit — a task will be created in ClickUp automatically.
               </p>
