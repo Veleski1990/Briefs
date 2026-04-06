@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #e4e2dd;
+    color: #2e2e2e;
+  }
+
+  input[type="date"] {
+    color-scheme: light;
+  }
+
+  select option {
+    background-color: #ffffff;
+    color: #2e2e2e;
+  }
+}
