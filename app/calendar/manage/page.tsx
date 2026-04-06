@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { CLIENTS } from '@/lib/constants'
+import type { Client } from '@/lib/types'
 import { clientToSlug, CATEGORY_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
 import type { CalendarPost, PostFormat, PostCategory, PostStatus } from '@/lib/calendar-types'
 
@@ -36,7 +37,7 @@ const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.
 const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-widest text-gray-400'
 
 export default function CalendarManagePage() {
-  const [selectedClient, setSelectedClient] = useState(CLIENTS[0])
+  const [selectedClient, setSelectedClient] = useState<Client>(CLIENTS[0])
   const [posts, setPosts] = useState<CalendarPost[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
