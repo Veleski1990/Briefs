@@ -6,8 +6,6 @@ import {
   PLATFORMS,
   PIPELINES,
   PIPELINE_DESCRIPTIONS,
-  FUNNEL_STAGES,
-  FUNNEL_STAGE_DESCRIPTIONS,
   TEAM_MEMBERS,
 } from '@/lib/constants'
 import type { BriefFormData, VideoRow, SubmitBriefResponse } from '@/lib/types'
@@ -352,7 +350,7 @@ export default function BriefPage() {
           <section className="rounded-xl bg-brand-surface p-6 shadow-sm border border-brand-border">
             <SectionHeading
               title="Shoot Context"
-              description="Give the editor the full picture of what was captured."
+              description="Give the editor the full picture of what was captured and why."
             />
             <div className="space-y-4">
               <TextField
@@ -365,57 +363,13 @@ export default function BriefPage() {
               />
               <TextField
                 id="whatWasFilmed"
-                label="What Was Filmed"
+                label="Shoot Context"
                 value={form.whatWasFilmed}
                 onChange={(v) => setField('whatWasFilmed', v)}
-                placeholder="Describe what was shot — products, people, scenes…"
+                placeholder="What was filmed, the location and vibe, and what the shoot is trying to achieve — e.g. Kitchen team at Rowanos, warm and energetic vibe, goal is to drive bookings via Instagram"
                 multiline
-                rows={3}
+                rows={4}
               />
-              <TextField
-                id="locationVibe"
-                label="Location / Vibe"
-                value={form.locationVibe}
-                onChange={(v) => setField('locationVibe', v)}
-                placeholder="e.g. Outdoor café, natural light, relaxed and warm vibe"
-              />
-              <TextField
-                id="shootObjective"
-                label="Shoot Objective"
-                value={form.shootObjective}
-                onChange={(v) => setField('shootObjective', v)}
-                placeholder="What was the goal of this shoot overall?"
-                multiline
-                rows={2}
-              />
-            </div>
-          </section>
-
-          {/* ── SECTION 3: Funnel Stage ── */}
-          <section className="rounded-xl bg-brand-surface p-6 shadow-sm border border-brand-border">
-            <SectionHeading title="Funnel Stage" />
-            <div className="space-y-3">
-              <div className="flex gap-3">
-                {FUNNEL_STAGES.map((stage) => (
-                  <button
-                    key={stage}
-                    type="button"
-                    onClick={() => setField('funnelStage', stage)}
-                    className={`flex-1 rounded-lg border px-4 py-3 text-sm font-semibold transition-all ${
-                      form.funnelStage === stage
-                        ? 'border-brand-maroon bg-brand-maroon text-brand-accent'
-                        : 'border-brand-border bg-brand-surface text-brand-text-dim hover:border-brand-maroon hover:text-brand-maroon'
-                    }`}
-                  >
-                    {stage}
-                  </button>
-                ))}
-              </div>
-              {form.funnelStage && (
-                <p className="rounded-lg border border-brand-border bg-brand-surface-2 px-4 py-3 text-sm text-brand-text-dim">
-                  {FUNNEL_STAGE_DESCRIPTIONS[form.funnelStage]}
-                </p>
-              )}
             </div>
           </section>
 
