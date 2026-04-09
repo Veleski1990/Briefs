@@ -311,6 +311,13 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
                 </a>
               )}
 
+              {selected.caption && (
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Caption</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selected.caption}</p>
+                </div>
+              )}
+
               {ap.status === 'approved' && (
                 <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 font-semibold text-center">
                   Approved — thanks!

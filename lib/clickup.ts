@@ -119,12 +119,16 @@ export async function createClickUpTask(brief: BriefFormData) {
 
   const listId = (brief.pipeline && PIPELINE_LIST_IDS[brief.pipeline]) || CLICKUP_LIST_ID
 
+  // Month tag e.g. "April 2026" for easy filtering in ClickUp
+  const monthTag = new Date().toLocaleString('en-AU', { month: 'long', year: 'numeric' })
+
   const body: Record<string, unknown> = {
     name: taskName,
     description,
     markdown_description: description,
     status: 'in edit',
     priority: 3, // Normal
+    tags: [monthTag.toLowerCase()],
   }
 
   if (customFields.length > 0) {

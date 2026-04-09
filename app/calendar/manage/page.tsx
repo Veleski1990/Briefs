@@ -19,6 +19,7 @@ function emptyPost(clientSlug: string): Omit<CalendarPost, 'id' | 'createdAt'> {
     category: 'lifestyle',
     scheduledDate: '',
     previewUrl: '',
+    caption: '',
     notes: '',
     status: 'pending',
   }
@@ -306,8 +307,12 @@ export default function CalendarManagePage() {
                 <input className={inputClass} value={form.previewUrl || ''} onChange={(e) => setForm((p) => ({ ...p, previewUrl: e.target.value }))} placeholder="Frame.io review link or direct video URL" />
               </div>
               <div className="sm:col-span-2">
-                <label className={labelClass}>Notes (internal)</label>
-                <textarea className={`${inputClass} resize-y`} rows={2} value={form.notes || ''} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Any notes for the team…" />
+                <label className={labelClass}>Caption / Copy</label>
+                <textarea className={`${inputClass} resize-y`} rows={4} value={form.caption || ''} onChange={(e) => setForm((p) => ({ ...p, caption: e.target.value }))} placeholder="Paste the post caption here — this will be shown to the client for review alongside the video…" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Notes (internal only)</label>
+                <textarea className={`${inputClass} resize-y`} rows={2} value={form.notes || ''} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Any internal notes for the team — not shown to client…" />
               </div>
             </div>
             <button

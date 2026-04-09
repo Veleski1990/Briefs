@@ -10,7 +10,8 @@ export interface CalendarPost {
   category: PostCategory
   scheduledDate: string   // YYYY-MM-DD
   previewUrl?: string     // direct image/video URL or Frame.io review link
-  notes?: string
+  caption?: string        // post caption / copy to show client
+  notes?: string          // internal notes (not shown to client)
   status: PostStatus
   clientNote?: string     // feedback from client when requesting changes
   respondedAt?: string    // ISO timestamp of last client approval/rejection
