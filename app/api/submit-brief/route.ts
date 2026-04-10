@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     // Create subtasks + patch brief URL in parallel, then store
     const [videoSubtaskIds] = await Promise.all([
-      createVideoSubtasks(taskId, listId, brief.videos),
+      createVideoSubtasks(taskId, listId, brief.videos, brief),
       patchTaskBriefUrl(taskId, description, briefUrl),
       notifyWebhook({ brief, briefUrl, taskUrl, videoCount: brief.videos.length }),
     ])

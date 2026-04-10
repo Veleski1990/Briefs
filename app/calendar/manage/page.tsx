@@ -3,8 +3,104 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CLIENTS } from '@/lib/constants'
 import type { Client } from '@/lib/types'
-import { clientToSlug, CATEGORY_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
+import { clientToSlug, slugToDisplay, CATEGORY_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
 import type { CalendarPost, PostFormat, PostCategory, PostStatus } from '@/lib/calendar-types'
+
+// ── Mini calendar preview (same grid logic as client page) ──
+const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+function getStartDay(year: number, month: number) {
+  const d = new Date(year, month, 1).getDay()
+  return d === 0 ? 6 : d - 1
+}
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month + 1, 0).getDate()
+}
+
+function CalendarPreview({ posts, clientName }: { posts: CalendarPost[]; clientName: string }) {
+  const today = new Date()
+  const [viewYear, setViewYear] = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
+
+  useEffect(() => {
+    const sorted = [...posts].filter(p => p.status !== 'draft').sort((a,b) => a.scheduledDate.localeCompare(b.scheduledDate))
+    if (sorted.length > 0) {
+      const d = new Date(sorted[0].scheduledDate + 'T00:00:00')
+      setViewYear(d.getFullYear()); setViewMonth(d.getMonth())
+    }
+  }, [posts])
+
+  const daysInMonth = getDaysInMonth(viewYear, viewMonth)
+  const startDay = getStartDay(viewYear, viewMonth)
+  const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7
+  const cells = Array.from({ length: totalCells }, (_, i) => {
+    const d = i - startDay + 1
+    return d >= 1 && d <= daysInMonth ? d : null
+  })
+  const weeks: (number | null)[][] = []
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+
+  const postsByDay: Record<number, CalendarPost[]> = {}
+  posts.filter(p => p.status !== 'draft').forEach((p) => {
+    const d = new Date(p.scheduledDate + 'T00:00:00')
+    if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
+      const day = d.getDate()
+      if (!postsByDay[day]) postsByDay[day] = []
+      postsByDay[day].push(p)
+    }
+  })
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="bg-[#4f1c1e] px-5 py-4 flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#efff72]/70">Preview — client view</p>
+          <p className="text-lg font-bold text-white">{clientName} — {MONTH_NAMES[viewMonth]} {viewYear}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y=>y-1) } else setViewMonth(m=>m-1) }}
+            className="rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20">← Prev</button>
+          <button onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y=>y+1) } else setViewMonth(m=>m+1) }}
+            className="rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20">Next →</button>
+        </div>
+      </div>
+      {/* Day headers */}
+      <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+        {DAYS.map(d => <div key={d} className="py-2 text-center text-[9px] font-bold tracking-widest text-gray-400">{d}</div>)}
+      </div>
+      {/* Weeks */}
+      {weeks.map((week, wi) => (
+        <div key={wi} className="grid grid-cols-7 divide-x divide-gray-100 border-b border-gray-100">
+          {week.map((day, di) => {
+            const dayPosts = day ? (postsByDay[day] ?? []) : []
+            const isToday = day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear()
+            return (
+              <div key={di} className={`min-h-[80px] p-1.5 ${!day ? 'bg-gray-50/50' : 'bg-white'}`}>
+                {day && (
+                  <>
+                    <p className={`text-[10px] font-bold mb-1 ${isToday ? 'text-[#4f1c1e]' : 'text-gray-300'}`}>{day}</p>
+                    {dayPosts.map(post => {
+                      const cat = CATEGORY_COLOURS[post.category]
+                      const isApproved = post.status === 'approved'
+                      const isChanges = post.status === 'changes-requested'
+                      return (
+                        <div key={post.id} className={`rounded px-1.5 py-1 mb-0.5 ${isApproved ? 'bg-green-100' : isChanges ? 'bg-orange-100' : cat.bg}`}>
+                          <p className={`text-[8px] font-bold uppercase ${isApproved ? 'text-green-600' : isChanges ? 'text-orange-500' : cat.text}`}>{post.format}</p>
+                          <p className={`text-[9px] font-semibold leading-tight truncate ${isApproved ? 'text-green-800' : isChanges ? 'text-orange-800' : cat.text}`}>{post.title}</p>
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const FORMATS: PostFormat[] = ['REEL', 'SHORT-FORM', 'STATIC', 'CAROUSEL', 'STORY', 'VSL']
 const CATEGORIES: PostCategory[] = ['founder', 'product', 'lifestyle', 'educational', 'testimonial', 'promotional', 'other']
@@ -47,6 +143,7 @@ export default function CalendarManagePage() {
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [token, setToken] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
 
   const slug = clientToSlug(selectedClient)
 
@@ -324,6 +421,20 @@ export default function CalendarManagePage() {
               {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Add Post'}
             </button>
           </div>
+        )}
+
+        {/* Preview toggle */}
+        {sorted.length > 0 && (
+          <button
+            onClick={() => setShowPreview(p => !p)}
+            className={`w-full rounded-2xl border-2 py-3 text-sm font-semibold transition-all ${showPreview ? 'border-[#4f1c1e] bg-[#4f1c1e] text-[#efff72]' : 'border-[#4f1c1e]/30 text-[#4f1c1e] hover:border-[#4f1c1e]'}`}
+          >
+            {showPreview ? 'Hide Calendar Preview' : 'Preview Client Calendar'}
+          </button>
+        )}
+
+        {showPreview && (
+          <CalendarPreview posts={posts} clientName={selectedClient} />
         )}
 
         {/* Posts list */}

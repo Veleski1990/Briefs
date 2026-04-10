@@ -154,41 +154,64 @@ export async function createClickUpTask(brief: BriefFormData) {
   }
 }
 
-// Creates one subtask per video under the parent task.
-// Returns a map of videoId → subtask ClickUp task ID.
+// Creates one independent task per video (no parent).
+// Each task gets the CLIENT custom field + month tag so it sits correctly in the pipeline.
+// Returns a map of videoId → ClickUp task ID.
 export async function createVideoSubtasks(
-  parentTaskId: string,
+  _parentTaskId: string,
   listId: string,
-  videos: VideoRow[]
+  videos: VideoRow[],
+  brief?: BriefFormData
 ): Promise<Record<string, string>> {
-  const subtaskIds: Record<string, string> = {}
+  const taskIds: Record<string, string> = {}
+  const monthTag = new Date().toLocaleString('en-AU', { month: 'long', year: 'numeric' }).toLowerCase()
+
+  // CLIENT custom field for each video task
+  const customFields: object[] = []
+  if (brief?.client) {
+    const clientOptionId = CLIENT_OPTION_IDS[brief.client]
+    if (CLICKUP_FIELD_IDS.CLIENT && clientOptionId) {
+      customFields.push({ id: CLICKUP_FIELD_IDS.CLIENT, value: clientOptionId })
+    }
+    // TYPE field — use per-video format
+  }
 
   for (let i = 0; i < videos.length; i++) {
     const v = videos[i]
-    const name = `Video ${i + 1} — ${v.format || 'TBD'}${v.duration ? ` (${v.duration})` : ''}`
+    const client = brief?.client ? `[${brief.client}] ` : ''
+    const name = `${client}${v.format || 'VIDEO'} ${i + 1}${v.angleObjective ? ` — ${v.angleObjective}` : ''}${v.duration ? ` (${v.duration})` : ''}`
+
+    // TYPE field per video format
+    const videoCustomFields = [...customFields]
+    const typeOptionId = v.format ? TYPE_OPTION_IDS[v.format as keyof typeof TYPE_OPTION_IDS] : null
+    if (CLICKUP_FIELD_IDS.TYPE && typeOptionId) {
+      videoCustomFields.push({ id: CLICKUP_FIELD_IDS.TYPE, value: typeOptionId })
+    }
+
     const lines = [
-      v.angleObjective && `**Angle / Objective:** ${v.angleObjective}`,
+      brief?.shootDate && `**Shoot Date:** ${brief.shootDate}`,
+      brief?.assignedEditor && `**Editor:** ${brief.assignedEditor}`,
       v.hook && `**Hook (first 3s):** ${v.hook}`,
-      ...(v.aRollLinks ? v.aRollLinks.split('\n').filter(Boolean).map((l, i) => `**A-Roll${i > 0 ? ` ${i + 1}` : ''}:** ${l}`) : []),
-      ...(v.bRollLinks ? v.bRollLinks.split('\n').filter(Boolean).map((l, i) => `**B-Roll${i > 0 ? ` ${i + 1}` : ''}:** ${l}`) : []),
+      ...(v.aRollLinks ? v.aRollLinks.split('\n').filter(Boolean).map((l, idx) => `**A-Roll${idx > 0 ? ` ${idx + 1}` : ''}:** ${l}`) : []),
+      ...(v.bRollLinks ? v.bRollLinks.split('\n').filter(Boolean).map((l, idx) => `**B-Roll${idx > 0 ? ` ${idx + 1}` : ''}:** ${l}`) : []),
       v.scriptLink && `**Script:** ${v.scriptLink}`,
       v.musicLink && `**Music:** ${v.musicLink}`,
       v.textOverlays && `**Text Overlays:** ${v.textOverlays}`,
       v.specialNotes && `**Special Notes:** ${v.specialNotes}`,
+      brief?.whatWasFilmed && `**Shoot Context:** ${brief.whatWasFilmed}`,
+      brief?.generalInstructions && `**General Instructions:** ${brief.generalInstructions}`,
     ].filter(Boolean).join('\n')
 
     const body: Record<string, unknown> = {
       name,
-      parent: parentTaskId,
+      description: lines,
+      markdown_description: lines,
       status: 'in edit',
       priority: 3,
+      tags: [monthTag],
     }
-    if (lines) {
-      body.description = lines
-      body.markdown_description = lines
-    }
+    if (videoCustomFields.length > 0) body.custom_fields = videoCustomFields
     if (v.deadline) {
-      // ClickUp expects due_date as milliseconds timestamp
       body.due_date = new Date(v.deadline).getTime()
       body.due_date_time = false
     }
@@ -200,18 +223,18 @@ export async function createVideoSubtasks(
         body: JSON.stringify(body),
       })
       if (res.ok) {
-        const subtask = await res.json()
-        subtaskIds[v.id] = subtask.id as string
+        const task = await res.json()
+        taskIds[v.id] = task.id as string
       } else {
         const err = await res.text()
-        console.error(`[clickup] Failed to create subtask for ${v.id}: ${err}`)
+        console.error(`[clickup] Failed to create task for video ${v.id}: ${err}`)
       }
     } catch (err) {
-      console.error(`[clickup] Subtask creation error for ${v.id}:`, err)
+      console.error(`[clickup] Task creation error for video ${v.id}:`, err)
     }
   }
 
-  return subtaskIds
+  return taskIds
 }
 
 export async function updateSubtaskStatus(subtaskId: string, status: string) {
