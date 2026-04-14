@@ -8,6 +8,7 @@ interface ClientProfile {
   captionFontImageUrl: string
   overlayFont: string
   overlayFontImageUrl: string
+  logoUrl: string
   dos: string[]
   donts: string[]
   generalNotes: string
@@ -53,6 +54,7 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
       !profile.captionFontImageUrl &&
       !profile.overlayFont &&
       !profile.overlayFontImageUrl &&
+      !profile.logoUrl &&
       !profile.generalNotes &&
       profile.dos.length === 0 &&
       profile.donts.length === 0)
@@ -87,6 +89,12 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
         </p>
       ) : (
         <div className="space-y-2">
+          {profile.logoUrl && (
+            <div className="flex gap-3 items-start">
+              <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Logo</span>
+              <img src={profile.logoUrl} alt="Brand logo" className="max-h-12 max-w-[120px] object-contain bg-white rounded border border-brand-border p-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            </div>
+          )}
           <Row label="Music" value={profile.musicStyle} />
           <Row label="Pacing" value={profile.editingPace} />
           <Row label="Colour Codes" value={profile.colourCodes} />

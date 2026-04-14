@@ -11,6 +11,7 @@ interface ClientProfile {
   captionFontImageUrl: string
   overlayFont: string
   overlayFontImageUrl: string
+  logoUrl: string
   dos: string[]
   donts: string[]
   generalNotes: string
@@ -27,6 +28,7 @@ function emptyProfile(): ClientProfile {
     captionFontImageUrl: '',
     overlayFont: '',
     overlayFontImageUrl: '',
+    logoUrl: '',
     dos: [],
     donts: [],
     generalNotes: '',
@@ -146,6 +148,48 @@ export default function ClientsPage() {
             </div>
 
             <div className="space-y-4">
+              {/* Brand Logo */}
+              <div className="rounded-lg border border-brand-border bg-brand-surface-2 p-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-muted">Brand Logo</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = () => setField('logoUrl', reader.result as string)
+                    reader.readAsDataURL(file)
+                  }}
+                />
+                {form.logoUrl && (
+                  <div className="relative flex items-start gap-4">
+                    <img
+                      src={form.logoUrl}
+                      alt="Brand logo"
+                      className="max-h-24 max-w-[200px] rounded-lg border border-brand-border object-contain bg-white p-2"
+                    />
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={form.logoUrl}
+                        download={`${selected.toLowerCase().replace(/\s+/g, '-')}-logo`}
+                        className="rounded-lg border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-text hover:border-brand-maroon hover:text-brand-maroon transition-colors"
+                      >
+                        Download
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setField('logoUrl', '')}
+                        className="rounded-lg border border-brand-border px-3 py-1.5 text-xs text-brand-muted hover:border-red-300 hover:text-red-500 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-brand-muted">
                   Music Style

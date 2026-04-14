@@ -98,7 +98,8 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
     !profile ||
     (!profile.musicStyle && !profile.editingPace && !profile.colourCodes &&
       !profile.captionFont && !profile.captionFontImageUrl &&
-      !profile.overlayFont && !profile.overlayFontImageUrl && !profile.generalNotes &&
+      !profile.overlayFont && !profile.overlayFontImageUrl &&
+      !profile.logoUrl && !profile.generalNotes &&
       (!profile.dos || profile.dos.length === 0) &&
       (!profile.donts || profile.donts.length === 0))
 
@@ -112,6 +113,12 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
         </h2>
       </div>
       <div className="px-5 py-4 space-y-2.5">
+        {profile!.logoUrl && (
+          <div className="flex gap-3 items-start">
+            <span className="w-24 flex-shrink-0 text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Logo</span>
+            <img src={profile!.logoUrl} alt="Brand logo" className="max-h-16 max-w-[140px] rounded-lg border border-gray-200 object-contain bg-gray-50 p-1" />
+          </div>
+        )}
         {profile!.musicStyle && <ProfileRow label="Music" value={profile!.musicStyle} />}
         {profile!.editingPace && <ProfileRow label="Pacing" value={profile!.editingPace} />}
         {profile!.colourCodes && <ProfileRow label="Colour Codes" value={profile!.colourCodes} />}

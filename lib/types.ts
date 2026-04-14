@@ -68,6 +68,7 @@ export interface ClientProfile {
   captionFontImageUrl: string
   overlayFont: string
   overlayFontImageUrl: string
+  logoUrl: string
   dos: string[]
   donts: string[]
   generalNotes: string
