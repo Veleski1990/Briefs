@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CLIENTS } from '@/lib/constants'
 import type { Client } from '@/lib/types'
-import { clientToSlug, slugToDisplay, CATEGORY_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
+import { clientToSlug, slugToDisplay, STATUS_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
 import type { CalendarPost, PostFormat, PostCategory, PostStatus } from '@/lib/calendar-types'
 
 // ── Mini calendar preview (same grid logic as client page) ──
@@ -81,13 +81,12 @@ function CalendarPreview({ posts, clientName }: { posts: CalendarPost[]; clientN
                   <>
                     <p className={`text-[10px] font-bold mb-1 ${isToday ? 'text-[#4f1c1e]' : 'text-gray-300'}`}>{day}</p>
                     {dayPosts.map(post => {
-                      const cat = CATEGORY_COLOURS[post.category]
-                      const isApproved = post.status === 'approved'
-                      const isChanges = post.status === 'changes-requested'
+                      const sc = STATUS_COLOURS[post.status]
                       return (
-                        <div key={post.id} className={`rounded px-1.5 py-1 mb-0.5 ${isApproved ? 'bg-green-100' : isChanges ? 'bg-orange-100' : cat.bg}`}>
-                          <p className={`text-[8px] font-bold uppercase ${isApproved ? 'text-green-600' : isChanges ? 'text-orange-500' : cat.text}`}>{post.format}</p>
-                          <p className={`text-[9px] font-semibold leading-tight truncate ${isApproved ? 'text-green-800' : isChanges ? 'text-orange-800' : cat.text}`}>{post.title}</p>
+                        <div key={post.id} className={`rounded px-1.5 py-1 mb-0.5 ${sc.bg}`}>
+                          <p className={`text-[8px] font-bold uppercase ${sc.text}`}>{post.format}</p>
+                          <p className={`text-[9px] font-semibold leading-tight truncate ${sc.text}`}>{post.title}</p>
+                          <p className="text-[8px] text-gray-400 capitalize">{post.category}</p>
                         </div>
                       )
                     })}
@@ -397,6 +396,7 @@ export default function CalendarManagePage() {
                   <option value="pending">Pending Approval</option>
                   <option value="approved">Approved</option>
                   <option value="changes-requested">Changes Requested</option>
+                  <option value="scheduled">Scheduled / Posted</option>
                 </select>
               </div>
               <div className="sm:col-span-2">
@@ -445,14 +445,14 @@ export default function CalendarManagePage() {
         ) : (
           <div className="space-y-2">
             {sorted.map((post) => {
-              const cat = CATEGORY_COLOURS[post.category]
+              const sc = STATUS_COLOURS[post.status]
               const st = STATUS_STYLES[post.status]
               const [, m, d] = post.scheduledDate.split('-')
               const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
               const dateDisplay = `${d} ${months[parseInt(m) - 1]}`
               return (
                 <div key={post.id} className={`flex items-center gap-4 rounded-2xl border bg-white px-5 py-3.5 shadow-sm ${post.status === 'changes-requested' ? 'border-orange-200' : 'border-gray-200'}`}>
-                  <div className={`flex-shrink-0 rounded-full w-2.5 h-2.5 ${cat.dot}`} />
+                  <div className={`flex-shrink-0 rounded-full w-2.5 h-2.5 ${sc.dot}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-gray-900 truncate">{post.title}</span>

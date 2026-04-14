@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CATEGORY_COLOURS, STATUS_STYLES, slugToDisplay } from '@/lib/calendar-types'
+import { STATUS_COLOURS, STATUS_STYLES, slugToDisplay } from '@/lib/calendar-types'
 import type { CalendarPost, PostStatus } from '@/lib/calendar-types'
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
@@ -186,27 +186,14 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
         </div>
 
         {/* Legend */}
-        {usedCategories.length > 0 && (
-          <div className="flex flex-wrap gap-4">
-            {usedCategories.map((cat) => {
-              const c = CATEGORY_COLOURS[cat]
-              return (
-                <div key={cat} className="flex items-center gap-1.5">
-                  <span className={`w-2.5 h-2.5 rounded-sm ${c.dot}`} />
-                  <span className="text-xs text-gray-600 capitalize">{cat}</span>
-                </div>
-              )
-            })}
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-green-400" />
-              <span className="text-xs text-gray-600">Approved</span>
+        <div className="flex flex-wrap gap-4">
+          {(Object.entries(STATUS_COLOURS) as [import('@/lib/calendar-types').PostStatus, typeof STATUS_COLOURS[keyof typeof STATUS_COLOURS]][]).map(([status, c]) => (
+            <div key={status} className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 rounded-sm ${c.dot}`} />
+              <span className="text-xs text-gray-600">{c.label}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-orange-300" />
-              <span className="text-xs text-gray-600">Changes requested</span>
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
 
         {/* Calendar */}
         <div className="space-y-0 rounded-xl overflow-hidden border border-gray-300 shadow-sm">
@@ -244,24 +231,17 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
                             {dayPosts.length === 0 && <p className="text-gray-200 text-lg leading-none">—</p>}
                             <div className="space-y-1">
                               {dayPosts.map((post) => {
-                                const cat = CATEGORY_COLOURS[post.category]
                                 const ap = approval[post.id]
-                                const isApproved = ap?.status === 'approved'
-                                const isChanges = ap?.status === 'changes-requested'
+                                const sc = STATUS_COLOURS[ap?.status ?? post.status]
                                 return (
                                   <button
                                     key={post.id}
                                     onClick={() => { setSelected(post); setNoteOpen(false) }}
-                                    className={`w-full text-left rounded-lg px-2 py-1.5 transition-opacity hover:opacity-75 ${
-                                      isApproved ? 'bg-green-100' : isChanges ? 'bg-orange-100' : cat.bg
-                                    }`}
+                                    className={`w-full text-left rounded-lg px-2 py-1.5 transition-opacity hover:opacity-75 ${sc.bg}`}
                                   >
-                                    <p className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${
-                                      isApproved ? 'text-green-600' : isChanges ? 'text-orange-500' : cat.text
-                                    }`}>{post.format}</p>
-                                    <p className={`text-[11px] font-semibold leading-tight ${
-                                      isApproved ? 'text-green-800' : isChanges ? 'text-orange-800' : cat.text
-                                    }`}>{post.title}</p>
+                                    <p className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${sc.text}`}>{post.format}</p>
+                                    <p className={`text-[11px] font-semibold leading-tight ${sc.text}`}>{post.title}</p>
+                                    <p className="text-[9px] text-gray-400 capitalize mt-0.5">{post.category}</p>
                                   </button>
                                 )
                               })}
@@ -288,7 +268,7 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
           onClick={() => setSelected(null)}>
           <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}>
-            <div className={`h-1.5 w-full ${CATEGORY_COLOURS[selected.category].dot}`} />
+            <div className={`h-1.5 w-full ${STATUS_COLOURS[ap.status].dot}`} />
             <div className="p-5 space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
