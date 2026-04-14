@@ -97,7 +97,8 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
   const isEmpty =
     !profile ||
     (!profile.musicStyle && !profile.editingPace && !profile.colourCodes &&
-      !profile.fonts && !profile.textStyleImageUrl && !profile.generalNotes &&
+      !profile.captionFont && !profile.captionFontImageUrl &&
+      !profile.overlayFont && !profile.overlayFontImageUrl && !profile.generalNotes &&
       (!profile.dos || profile.dos.length === 0) &&
       (!profile.donts || profile.donts.length === 0))
 
@@ -114,15 +115,18 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
         {profile!.musicStyle && <ProfileRow label="Music" value={profile!.musicStyle} />}
         {profile!.editingPace && <ProfileRow label="Pacing" value={profile!.editingPace} />}
         {profile!.colourCodes && <ProfileRow label="Colour Codes" value={profile!.colourCodes} />}
-        {profile!.fonts && <ProfileRow label="Fonts" value={profile!.fonts} />}
-        {profile!.textStyleImageUrl && (
+        {profile!.captionFont && <ProfileRow label="Caption Font" value={profile!.captionFont} />}
+        {profile!.captionFontImageUrl && (
           <div className="flex gap-3">
-            <span className="w-24 flex-shrink-0 text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Text Style</span>
-            <img
-              src={profile!.textStyleImageUrl}
-              alt="Text style reference"
-              className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50"
-            />
+            <span className="w-24 flex-shrink-0 text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Caption Ref</span>
+            <img src={profile!.captionFontImageUrl} alt="Caption font reference" className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50" />
+          </div>
+        )}
+        {profile!.overlayFont && <ProfileRow label="Overlay Font" value={profile!.overlayFont} />}
+        {profile!.overlayFontImageUrl && (
+          <div className="flex gap-3">
+            <span className="w-24 flex-shrink-0 text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Overlay Ref</span>
+            <img src={profile!.overlayFontImageUrl} alt="Overlay font reference" className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50" />
           </div>
         )}
         {profile!.dos && profile!.dos.length > 0 && (
