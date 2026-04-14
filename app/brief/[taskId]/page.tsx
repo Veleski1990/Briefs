@@ -260,12 +260,29 @@ function Badge({ label, colour }: { label: string; colour: 'maroon' | 'lime' | '
   return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles[colour]}`}>{label}</span>
 }
 
+async function getLiveClientProfile(clientName: string): Promise<ClientProfile | null> {
+  const redis = await getRedis()
+  if (!redis) return null
+  const raw = await redis.get('client-profiles')
+  await redis.quit()
+  if (!raw) return null
+  try {
+    const profiles = JSON.parse(raw)
+    return profiles[clientName] ?? null
+  } catch {
+    return null
+  }
+}
+
 export default async function BriefPage({ params }: { params: Promise<{ taskId: string }> }) {
   const { taskId } = await params
   const stored = await getStoredBrief(taskId)
   if (!stored) notFound()
 
-  const { brief, videoStatuses, videoSubtaskIds, clientProfile, taskUrl, submittedAt } = stored
+  const { brief, videoStatuses, videoSubtaskIds, taskUrl, submittedAt } = stored
+
+  // Always fetch live profile so changes in /clients are immediately reflected
+  const clientProfile = await getLiveClientProfile(brief.client)
   const funnelDesc = brief.funnelStage ? FUNNEL_STAGE_DESCRIPTIONS[brief.funnelStage] : null
 
   // Overall progress
