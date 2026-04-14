@@ -13,7 +13,6 @@ import SectionHeading from '@/components/SectionHeading'
 import SelectField from '@/components/SelectField'
 import TextField from '@/components/TextField'
 import VideoRowCard from '@/components/VideoRowCard'
-import VoiceButton from '@/components/VoiceButton'
 import ClientStylePanel from '@/components/ClientStylePanel'
 
 function SuccessBanner({ briefUrl, taskUrl }: { briefUrl: string; taskUrl?: string }) {
@@ -166,23 +165,6 @@ export default function BriefPage() {
     }))
   }
 
-  // --- voice fill ---
-
-  const handleVoiceFill = useCallback((data: Partial<BriefFormData>) => {
-    setForm((prev) => {
-      const merged = { ...prev, ...data }
-      // If voice returned videos, stamp each with a stable id
-      if (data.videos && data.videos.length > 0) {
-        merged.videos = data.videos.map((v, i) => ({
-          ...emptyVideo(`video-${videoCounter.current + i}`),
-          ...v,
-        }))
-        videoCounter.current += data.videos.length
-      }
-      return merged
-    })
-  }, [])
-
   // --- submit ---
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -261,8 +243,6 @@ export default function BriefPage() {
             <p className="mt-1 text-red-400">{result?.error}</p>
           </div>
         )}
-
-        <VoiceButton onFill={handleVoiceFill} />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* ── PIPELINE SELECTOR ── */}

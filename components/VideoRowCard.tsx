@@ -14,14 +14,8 @@ interface VideoRowCardProps {
   canRemove: boolean
 }
 
-function parseLinks(raw: string): string[] {
-  const links = raw.split('\n').map((l) => l.trim()).filter(Boolean)
-  return links.length > 0 ? links : ['']
-}
-
-function serializeLinks(links: string[]): string {
-  return links.filter(Boolean).join('\n')
-}
+// Formats where Hook + A-Roll/B-Roll are relevant
+const VIDEO_ONLY_FORMATS = new Set(['REEL', 'SHORT-FORM', 'VSL', 'STORY'])
 
 function FootageLinks({
   label,
@@ -48,9 +42,7 @@ function FootageLinks({
     onChange(next.filter(Boolean).join('\n'))
   }
 
-  const addLink = () => {
-    setLinks((prev) => [...prev, ''])
-  }
+  const addLink = () => setLinks((prev) => [...prev, ''])
 
   const removeLink = (i: number) => {
     const next = links.filter((_, idx) => idx !== i)
@@ -104,13 +96,18 @@ export default function VideoRowCard({
   onRemove,
   canRemove,
 }: VideoRowCardProps) {
+  const [showOptional, setShowOptional] = useState(false)
   const update = (field: keyof VideoRow) => (value: string) =>
     onChange(video.id, field, value)
+
+  const isVideoFormat = !video.format || VIDEO_ONLY_FORMATS.has(video.format)
 
   return (
     <div className="relative rounded-xl border border-brand-border bg-brand-surface p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-brand-maroon">Video {index + 1}</h3>
+        <h3 className="text-sm font-semibold text-brand-maroon">
+          Video {index + 1}{video.format ? ` — ${video.format}` : ''}
+        </h3>
         {canRemove && (
           <button
             type="button"
@@ -122,6 +119,7 @@ export default function VideoRowCard({
         )}
       </div>
 
+      {/* Always visible: Format / Duration / Deadline */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <SelectField
           id={`format-${video.id}`}
@@ -147,7 +145,8 @@ export default function VideoRowCard({
         />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4">
+      {/* Always visible: Angle */}
+      <div className="mt-4">
         <TextField
           id={`angle-${video.id}`}
           label="Angle / Objective"
@@ -155,71 +154,106 @@ export default function VideoRowCard({
           onChange={update('angleObjective')}
           placeholder="What is this video trying to achieve?"
         />
-        <TextField
-          id={`hook-${video.id}`}
-          label="Hook (First 3 Seconds)"
-          value={video.hook}
-          onChange={update('hook')}
-          placeholder="Describe exactly what should happen in the opening seconds"
-        />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FootageLinks
-          label="A-Roll Footage"
-          value={video.aRollLinks || ''}
-          onChange={update('aRollLinks')}
-          videoId={video.id}
-          fieldKey="aroll"
-        />
-        <FootageLinks
-          label="B-Roll Footage"
-          value={video.bRollLinks || ''}
-          onChange={update('bRollLinks')}
-          videoId={video.id}
-          fieldKey="broll"
-        />
+      {/* Video formats only: Hook + Footage */}
+      {isVideoFormat && (
+        <>
+          <div className="mt-4">
+            <TextField
+              id={`hook-${video.id}`}
+              label="Hook (First 3 Seconds)"
+              value={video.hook}
+              onChange={update('hook')}
+              placeholder="Describe exactly what should happen in the opening seconds"
+            />
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FootageLinks
+              label="A-Roll Footage"
+              value={video.aRollLinks || ''}
+              onChange={update('aRollLinks')}
+              videoId={video.id}
+              fieldKey="aroll"
+            />
+            <FootageLinks
+              label="B-Roll Footage"
+              value={video.bRollLinks || ''}
+              onChange={update('bRollLinks')}
+              videoId={video.id}
+              fieldKey="broll"
+            />
+          </div>
+        </>
+      )}
+
+      {/* Static/Carousel: just a single footage field */}
+      {!isVideoFormat && (
+        <div className="mt-4">
+          <FootageLinks
+            label="Footage / Assets"
+            value={video.aRollLinks || ''}
+            onChange={update('aRollLinks')}
+            videoId={video.id}
+            fieldKey="aroll"
+          />
+        </div>
+      )}
+
+      {/* Optional fields toggle */}
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setShowOptional((v) => !v)}
+          className="text-xs font-semibold text-brand-muted hover:text-brand-maroon transition-colors"
+        >
+          {showOptional ? '− Hide optional fields' : '+ Script, music, overlays, notes'}
+        </button>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField
-          id={`script-${video.id}`}
-          label="Script Link"
-          value={video.scriptLink}
-          onChange={update('scriptLink')}
-          placeholder="Docs / Notion URL"
-          type="url"
-        />
-        <TextField
-          id={`music-${video.id}`}
-          label="Music Link"
-          value={video.musicLink}
-          onChange={update('musicLink')}
-          placeholder="Spotify / SoundCloud URL"
-          type="url"
-        />
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField
-          id={`overlays-${video.id}`}
-          label="Text Overlays"
-          value={video.textOverlays}
-          onChange={update('textOverlays')}
-          placeholder="Any on-screen text, captions, CTAs…"
-          multiline
-          rows={2}
-        />
-        <TextField
-          id={`notes-${video.id}`}
-          label="Special Notes"
-          value={video.specialNotes}
-          onChange={update('specialNotes')}
-          placeholder="Anything the editor needs to know…"
-          multiline
-          rows={2}
-        />
-      </div>
+      {showOptional && (
+        <div className="mt-3 space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField
+              id={`script-${video.id}`}
+              label="Script Link"
+              value={video.scriptLink}
+              onChange={update('scriptLink')}
+              placeholder="Docs / Notion URL"
+              type="url"
+            />
+            <TextField
+              id={`music-${video.id}`}
+              label="Music Link"
+              value={video.musicLink}
+              onChange={update('musicLink')}
+              placeholder="Spotify / SoundCloud URL"
+              type="url"
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField
+              id={`overlays-${video.id}`}
+              label="Text Overlays"
+              value={video.textOverlays}
+              onChange={update('textOverlays')}
+              placeholder="Any on-screen text, captions, CTAs…"
+              multiline
+              rows={2}
+            />
+            <TextField
+              id={`notes-${video.id}`}
+              label="Special Notes"
+              value={video.specialNotes}
+              onChange={update('specialNotes')}
+              placeholder="Anything the editor needs to know…"
+              multiline
+              rows={2}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
