@@ -64,8 +64,10 @@ export interface ClientProfile {
   musicStyle: string
   editingPace: string
   colourCodes: string
-  fonts: string
-  textStyleImageUrl: string
+  captionFont: string
+  captionFontImageUrl: string
+  overlayFont: string
+  overlayFontImageUrl: string
   dos: string[]
   donts: string[]
   generalNotes: string

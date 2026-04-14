@@ -4,8 +4,10 @@ interface ClientProfile {
   musicStyle: string
   editingPace: string
   colourCodes: string
-  fonts: string
-  textStyleImageUrl: string
+  captionFont: string
+  captionFontImageUrl: string
+  overlayFont: string
+  overlayFontImageUrl: string
   dos: string[]
   donts: string[]
   generalNotes: string
@@ -20,8 +22,23 @@ function Row({ label, value }: { label: string; value: string }) {
   if (!value) return null
   return (
     <div className="flex gap-3">
-      <span className="w-28 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">{label}</span>
+      <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">{label}</span>
       <span className="text-sm text-brand-text">{value}</span>
+    </div>
+  )
+}
+
+function ImageRow({ label, url }: { label: string; url: string }) {
+  if (!url) return null
+  return (
+    <div className="flex gap-3">
+      <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">{label}</span>
+      <img
+        src={url}
+        alt={label}
+        className="max-h-28 rounded border border-brand-border object-contain bg-gray-50"
+        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+      />
     </div>
   )
 }
@@ -32,8 +49,10 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
     (!profile.musicStyle &&
       !profile.editingPace &&
       !profile.colourCodes &&
-      !profile.fonts &&
-      !profile.textStyleImageUrl &&
+      !profile.captionFont &&
+      !profile.captionFontImageUrl &&
+      !profile.overlayFont &&
+      !profile.overlayFontImageUrl &&
       !profile.generalNotes &&
       profile.dos.length === 0 &&
       profile.donts.length === 0)
@@ -71,21 +90,13 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
           <Row label="Music" value={profile.musicStyle} />
           <Row label="Pacing" value={profile.editingPace} />
           <Row label="Colour Codes" value={profile.colourCodes} />
-          <Row label="Fonts" value={profile.fonts} />
-          {profile.textStyleImageUrl && (
-            <div className="flex gap-3">
-              <span className="w-28 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Text Style</span>
-              <img
-                src={profile.textStyleImageUrl}
-                alt="Text style reference"
-                className="max-h-32 rounded border border-brand-border object-contain bg-gray-50"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-            </div>
-          )}
+          <Row label="Caption Font" value={profile.captionFont} />
+          <ImageRow label="Caption Ref" url={profile.captionFontImageUrl} />
+          <Row label="Overlay Font" value={profile.overlayFont} />
+          <ImageRow label="Overlay Ref" url={profile.overlayFontImageUrl} />
           {profile.dos.length > 0 && (
             <div className="flex gap-3">
-              <span className="w-28 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Do</span>
+              <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Do</span>
               <ul className="space-y-0.5">
                 {profile.dos.map((d, i) => (
                   <li key={i} className="text-sm text-brand-text">✓ {d}</li>
@@ -95,7 +106,7 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
           )}
           {profile.donts.length > 0 && (
             <div className="flex gap-3">
-              <span className="w-28 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Don't</span>
+              <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Don't</span>
               <ul className="space-y-0.5">
                 {profile.donts.map((d, i) => (
                   <li key={i} className="text-sm text-red-600">✗ {d}</li>
@@ -105,7 +116,7 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
           )}
           {profile.generalNotes && (
             <div className="flex gap-3">
-              <span className="w-28 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Notes</span>
+              <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Notes</span>
               <span className="text-sm text-brand-text">{profile.generalNotes}</span>
             </div>
           )}

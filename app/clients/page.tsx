@@ -7,8 +7,10 @@ interface ClientProfile {
   musicStyle: string
   editingPace: string
   colourCodes: string
-  fonts: string
-  textStyleImageUrl: string
+  captionFont: string
+  captionFontImageUrl: string
+  overlayFont: string
+  overlayFontImageUrl: string
   dos: string[]
   donts: string[]
   generalNotes: string
@@ -21,8 +23,10 @@ function emptyProfile(): ClientProfile {
     musicStyle: '',
     editingPace: '',
     colourCodes: '',
-    fonts: '',
-    textStyleImageUrl: '',
+    captionFont: '',
+    captionFontImageUrl: '',
+    overlayFont: '',
+    overlayFontImageUrl: '',
     dos: [],
     donts: [],
     generalNotes: '',
@@ -175,49 +179,70 @@ export default function ClientsPage() {
                   placeholder="e.g. Primary #4f1c1e · Accent #efff72 · White #ffffff"
                 />
               </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-brand-muted">
-                  Fonts / Text Style
-                </label>
+              {/* Caption font */}
+              <div className="rounded-lg border border-brand-border bg-brand-surface-2 p-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-muted">Caption Font (Subtitles)</p>
                 <input
                   className={inputClass}
-                  value={form.fonts}
-                  onChange={(e) => setField('fonts', e.target.value)}
-                  placeholder="e.g. Bold sans-serif, white text, lower thirds only"
+                  value={form.captionFont}
+                  onChange={(e) => setField('captionFont', e.target.value)}
+                  placeholder="e.g. ZY Resolve Caps, white, all-caps"
                 />
+                <div>
+                  <label className="mb-1.5 block text-xs text-brand-muted">Reference image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = () => setField('captionFontImageUrl', reader.result as string)
+                      reader.readAsDataURL(file)
+                    }}
+                  />
+                  {form.captionFontImageUrl && (
+                    <div className="mt-2 relative">
+                      <img src={form.captionFontImageUrl} alt="Caption font reference" className="max-h-40 w-full rounded-lg border border-brand-border object-contain bg-gray-50" />
+                      <button type="button" onClick={() => setField('captionFontImageUrl', '')}
+                        className="absolute top-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white hover:bg-black/70">Remove</button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-brand-muted">
-                  Text Style Reference Image
-                </label>
+
+              {/* Overlay font */}
+              <div className="rounded-lg border border-brand-border bg-brand-surface-2 p-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-muted">Text Overlay Font</p>
                 <input
-                  type="file"
-                  accept="image/*"
-                  className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    const reader = new FileReader()
-                    reader.onload = () => setField('textStyleImageUrl', reader.result as string)
-                    reader.readAsDataURL(file)
-                  }}
+                  className={inputClass}
+                  value={form.overlayFont}
+                  onChange={(e) => setField('overlayFont', e.target.value)}
+                  placeholder="e.g. Bebas Neue, yellow, bold — used for on-screen text and CTAs"
                 />
-                {form.textStyleImageUrl && (
-                  <div className="mt-2 relative">
-                    <img
-                      src={form.textStyleImageUrl}
-                      alt="Text style reference"
-                      className="max-h-48 w-full rounded-lg border border-brand-border object-contain bg-gray-50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setField('textStyleImageUrl', '')}
-                      className="absolute top-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white hover:bg-black/70"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
+                <div>
+                  <label className="mb-1.5 block text-xs text-brand-muted">Reference image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = () => setField('overlayFontImageUrl', reader.result as string)
+                      reader.readAsDataURL(file)
+                    }}
+                  />
+                  {form.overlayFontImageUrl && (
+                    <div className="mt-2 relative">
+                      <img src={form.overlayFontImageUrl} alt="Overlay font reference" className="max-h-40 w-full rounded-lg border border-brand-border object-contain bg-gray-50" />
+                      <button type="button" onClick={() => setField('overlayFontImageUrl', '')}
+                        className="absolute top-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white hover:bg-black/70">Remove</button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
