@@ -268,7 +268,15 @@ async function getLiveClientProfile(clientName: string): Promise<ClientProfile |
   if (!raw) return null
   try {
     const profiles = JSON.parse(raw)
-    return profiles[clientName] ?? null
+    const p = profiles[clientName]
+    if (!p) return null
+    // Migrate old field names saved before the font schema change
+    if (p.fonts && !p.captionFont) { p.captionFont = p.fonts; delete p.fonts }
+    if (p.textStyleImageUrl && !p.captionFontImageUrl) { p.captionFontImageUrl = p.textStyleImageUrl; delete p.textStyleImageUrl }
+    if (!p.overlayFont) p.overlayFont = ''
+    if (!p.overlayFontImageUrl) p.overlayFontImageUrl = ''
+    if (!p.logoUrl) p.logoUrl = ''
+    return p as ClientProfile
   } catch {
     return null
   }
