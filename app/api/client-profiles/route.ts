@@ -24,15 +24,35 @@ function writeLocalProfiles(data: unknown) {
   writeFileSync(join(process.cwd(), 'lib', 'client-profiles.json'), JSON.stringify(data, null, 2))
 }
 
+// Migrate any profiles still using the old single `fonts`/`textStyleImageUrl` fields
+function migrateProfiles(profiles: Record<string, Record<string, unknown>>) {
+  for (const client of Object.keys(profiles)) {
+    const p = profiles[client]
+    if (p.fonts && !p.captionFont) {
+      p.captionFont = p.fonts
+      delete p.fonts
+    }
+    if (p.textStyleImageUrl && !p.captionFontImageUrl) {
+      p.captionFontImageUrl = p.textStyleImageUrl
+      delete p.textStyleImageUrl
+    }
+    if (!p.overlayFont) p.overlayFont = ''
+    if (!p.overlayFontImageUrl) p.overlayFontImageUrl = ''
+    if (!p.logoUrl) p.logoUrl = ''
+  }
+  return profiles
+}
+
 export async function GET() {
   try {
     const redis = await getRedis()
     if (redis) {
       const raw = await redis.get(PROFILES_KEY)
       await redis.quit()
-      return NextResponse.json(raw ? JSON.parse(raw) : {})
+      const profiles = raw ? JSON.parse(raw) : {}
+      return NextResponse.json(migrateProfiles(profiles))
     }
-    return NextResponse.json(readLocalProfiles())
+    return NextResponse.json(migrateProfiles(readLocalProfiles()))
   } catch {
     return NextResponse.json({}, { status: 500 })
   }
