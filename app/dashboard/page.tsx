@@ -147,28 +147,30 @@ export default async function DashboardPage({
               <Link
                 key={pipeline}
                 href={isSelected ? '/dashboard' : `/dashboard?pipeline=${encodeURIComponent(pipeline)}`}
-                className={`rounded-2xl border p-4 transition-all ${
+                className={`rounded-2xl border px-4 py-3 transition-all ${
                   isSelected
                     ? 'border-[#4f1c1e] bg-[#4f1c1e] text-white shadow-md'
                     : 'border-gray-200 bg-white hover:border-[#4f1c1e]/40 hover:shadow-sm'
                 }`}
               >
-                <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${isSelected ? 'text-[#efff72]/80' : 'text-gray-400'}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${isSelected ? 'text-[#efff72]' : 'text-gray-700'}`}>
                   {pipeline}
                 </p>
-                <p className={`text-3xl font-bold ${isSelected ? 'text-white' : 'text-gray-800'}`}>{total}</p>
-                <p className={`text-xs mt-0.5 ${isSelected ? 'text-white/60' : 'text-gray-400'}`}>
-                  {total === 0 ? 'No videos' : `${active} active · ${done} done`}
-                </p>
+                <div className="flex items-baseline gap-2">
+                  <p className={`text-2xl font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>{total}</p>
+                  <p className={`text-xs font-semibold ${isSelected ? 'text-white/70' : 'text-gray-600'}`}>
+                    {total === 0 ? 'NO VIDEOS' : `${active} ACTIVE · ${done} DONE`}
+                  </p>
+                </div>
                 {(amendments > 0 || inReview > 0) && (
                   <div className="flex gap-1.5 mt-2 flex-wrap">
                     {amendments > 0 && (
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isSelected ? 'bg-orange-400/30 text-orange-200' : 'bg-orange-100 text-orange-700'}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isSelected ? 'bg-orange-400/30 text-orange-200' : 'bg-orange-100 text-orange-800'}`}>
                         {amendments} amend
                       </span>
                     )}
                     {inReview > 0 && (
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isSelected ? 'bg-purple-400/30 text-purple-200' : 'bg-purple-100 text-purple-700'}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isSelected ? 'bg-purple-400/30 text-purple-200' : 'bg-purple-100 text-purple-800'}`}>
                         {inReview} review
                       </span>
                     )}
