@@ -191,90 +191,55 @@ export default async function DashboardPage({
         {activeClients.map(({ client, briefs: clientBriefs }) => (
           <div key={client} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {/* Client header */}
-            <div className="flex items-center justify-between bg-[#4f1c1e]/5 border-b border-gray-200 px-5 py-3.5">
-              <h2 className="font-heading text-2xl text-[#4f1c1e]">{client}</h2>
-              <span className="text-xs font-medium text-gray-500">
-                {clientBriefs.reduce((n, b) => n + b.brief.videos.length, 0)} videos · {clientBriefs.length} brief{clientBriefs.length !== 1 ? 's' : ''}
-              </span>
+            <div className="flex items-center justify-between bg-[#4f1c1e]/5 border-b border-gray-200 px-5 py-3">
+              <h2 className="font-heading text-xl text-[#4f1c1e]">{client}</h2>
+              <Link
+                href={clientBriefs[0]?.briefUrl || `/brief/${clientBriefs[0]?.taskId}`}
+                target="_blank"
+                className="text-xs font-semibold text-[#4f1c1e] hover:underline"
+              >
+                Brief →
+              </Link>
             </div>
 
+            {/* All videos across all briefs for this client */}
             <div className="divide-y divide-gray-100">
               {clientBriefs
                 .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
-                .map((stored) => {
-                  const { brief, taskId, taskUrl, briefUrl, videoStatuses, videoAssetUrls } = stored
-                  const vstatus = videoStatuses ?? {}
-
-                  return (
-                    <div key={taskId} className="px-5 py-4 space-y-2">
-                      {/* Brief meta */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold text-gray-700">
-                          Shoot {formatShootDate(brief.shootDate)}
-                        </span>
-                        {brief.pipeline && (
-                          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600">
-                            {brief.pipeline}
-                          </span>
-                        )}
-                        {brief.assignedEditor && (
-                          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600">
-                            Editor: {brief.assignedEditor}
-                          </span>
-                        )}
-                        <div className="ml-auto flex items-center gap-2">
-                          <DeleteButton taskId={taskId} />
-                          {taskUrl && (
-                            <a href={taskUrl} target="_blank" rel="noopener noreferrer"
-                              className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-gray-400 transition-colors">
-                              ClickUp
-                            </a>
+                .flatMap((stored) => {
+                  const { brief, taskId, briefUrl, videoStatuses, videoAssetUrls } = stored
+                  return brief.videos.map((v, i) => {
+                    const s = (videoStatuses ?? {})[v.id] ?? 'not-started'
+                    const assetUrl = videoAssetUrls?.[v.id]
+                    const isDone = isVideoDone(s)
+                    return (
+                      <div key={`${taskId}-${v.id}`}
+                        className={`flex items-start gap-3 px-5 py-3 ${isDone ? 'opacity-40' : ''}`}>
+                        <span className={`mt-1 flex-shrink-0 h-2.5 w-2.5 rounded-full ${STATUS_DOT[s]}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`text-xs font-bold uppercase tracking-wide ${isDone ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {v.format || 'TBD'}{v.duration ? ` · ${v.duration}` : ''}
+                            </span>
+                            {assetUrl && (
+                              <a href={assetUrl} target="_blank" rel="noopener noreferrer"
+                                className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800 hover:bg-purple-200">
+                                Asset ready →
+                              </a>
+                            )}
+                          </div>
+                          {v.angleObjective && (
+                            <p className={`text-sm mt-0.5 leading-snug ${isDone ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800 font-medium'}`}>
+                              {v.angleObjective}
+                            </p>
                           )}
-                          <Link href={briefUrl || `/brief/${taskId}`} target="_blank"
-                            className="rounded-lg bg-[#4f1c1e] px-3 py-1.5 text-xs font-semibold text-[#efff72] hover:opacity-90 transition-opacity">
-                            Brief →
-                          </Link>
                         </div>
+                        <span className={`flex-shrink-0 self-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_PILL[s]}`}>
+                          {STATUS_LABEL[s]}
+                        </span>
                       </div>
-
-                      {/* Per-video rows */}
-                      <div className="space-y-1.5 mt-1">
-                        {brief.videos.map((v, i) => {
-                          const status = vstatus[v.id] ?? 'not-started'
-                          const assetUrl = videoAssetUrls?.[v.id]
-                          const isDone = isVideoDone(status)
-                          return (
-                            <div key={v.id}
-                              className={`rounded-xl px-4 py-3 ${isDone ? 'bg-gray-50' : 'bg-gray-50 border border-gray-200'}`}>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className={`flex-shrink-0 h-2.5 w-2.5 rounded-full ${STATUS_DOT[status]}`} />
-                                <span className={`text-xs font-bold ${isDone ? 'text-gray-400' : 'text-gray-800'}`}>
-                                  {i + 1}. {v.format || 'TBD'}{v.duration ? ` · ${v.duration}` : ''}
-                                </span>
-                                {v.deadline && (
-                                  <span className="text-xs text-gray-500">Due {formatShootDate(v.deadline)}</span>
-                                )}
-                                <span className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_PILL[status]}`}>
-                                  {STATUS_LABEL[status]}
-                                </span>
-                                {assetUrl && (
-                                  <a href={assetUrl} target="_blank" rel="noopener noreferrer"
-                                    className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-800 hover:bg-purple-200 transition-colors">
-                                    Final Asset →
-                                  </a>
-                                )}
-                              </div>
-                              {v.angleObjective && (
-                                <p className={`mt-1.5 ml-[18px] text-sm leading-snug ${isDone ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-700'}`}>
-                                  {v.angleObjective}
-                                </p>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
+                    )
+                  })
                 })}
             </div>
           </div>

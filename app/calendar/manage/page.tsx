@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { CLIENTS } from '@/lib/constants'
-import type { Client } from '@/lib/types'
+import { CALENDAR_CLIENTS } from '@/lib/constants'
+import type { CalendarClient } from '@/lib/constants'
 import { clientToSlug, slugToDisplay, STATUS_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
 import type { CalendarPost, PostFormat, PostCategory, PostStatus } from '@/lib/calendar-types'
 
@@ -133,18 +133,18 @@ const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.
 const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-widest text-gray-400'
 
 export default function CalendarManagePage() {
-  const [selectedClient, setSelectedClient] = useState<Client>(CLIENTS[0])
+  const [selectedClient, setSelectedClient] = useState<CalendarClient | null>(null)
   const [posts, setPosts] = useState<CalendarPost[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState(emptyPost(clientToSlug(CLIENTS[0])))
+  const [form, setForm] = useState(emptyPost(''))
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
 
-  const slug = clientToSlug(selectedClient)
+  const slug = selectedClient ? clientToSlug(selectedClient) : ''
 
   const loadToken = useCallback((s: string) => {
     fetch(`/api/calendar/token/${s}`)
@@ -154,6 +154,7 @@ export default function CalendarManagePage() {
   }, [])
 
   useEffect(() => {
+    if (!selectedClient) { setPosts([]); setToken(null); return }
     setLoading(true)
     fetch(`/api/calendar/${slug}`)
       .then((r) => r.json())
@@ -163,7 +164,7 @@ export default function CalendarManagePage() {
     setShowForm(false)
     setEditingId(null)
     loadToken(slug)
-  }, [slug, loadToken])
+  }, [slug, selectedClient, loadToken])
 
   const handleSave = async () => {
     if (!form.title || !form.scheduledDate) return
@@ -253,50 +254,16 @@ export default function CalendarManagePage() {
           </div>
         </div>
 
-        {/* Inbox — client responses */}
-        {inbox.length > 0 && (
-          <div className="rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4 space-y-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-orange-600">
-              Client Activity — {inbox.length} response{inbox.length !== 1 ? 's' : ''} in the last 7 days
-            </p>
-            {inbox.map((post) => {
-              const st = STATUS_STYLES[post.status]
-              return (
-                <div key={post.id} className="flex items-start gap-3 rounded-xl bg-white border border-orange-100 px-4 py-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-gray-900 truncate">{post.title}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.colour}`}>{st.label}</span>
-                      {post.respondedAt && (
-                        <span className="text-[10px] text-gray-400">{timeAgo(post.respondedAt)}</span>
-                      )}
-                    </div>
-                    {post.clientNote && (
-                      <p className="mt-1 text-xs text-orange-700 italic">"{post.clientNote}"</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleEdit(post)}
-                    className="flex-shrink-0 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:border-gray-400"
-                  >
-                    Edit
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
         {/* Client selector */}
         <div className="rounded-2xl bg-white border border-gray-200 px-5 py-4 shadow-sm">
           <label className={labelClass}>Client</label>
           <div className="flex flex-wrap gap-2 mt-1">
-            {CLIENTS.map((c) => (
+            {CALENDAR_CLIENTS.map((c) => (
               <button
                 key={c}
                 type="button"
-                onClick={() => setSelectedClient(c)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all ${selectedClient === c ? 'border-[#4f1c1e] bg-[#4f1c1e] text-[#efff72]' : 'border-gray-200 text-gray-600 hover:border-[#4f1c1e]'}`}
+                onClick={() => setSelectedClient(selectedClient === c ? null : c)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all ${selectedClient === c ? 'border-[#4f1c1e] bg-[#4f1c1e] text-[#efff72]' : 'border-gray-200 text-gray-700 hover:border-[#4f1c1e]'}`}
               >
                 {c}
               </button>
@@ -341,17 +308,51 @@ export default function CalendarManagePage() {
             </div>
           )}
 
-          <div className="mt-3 flex items-center gap-3">
-            <span className="text-xs text-gray-400">{posts.length} post{posts.length !== 1 ? 's' : ''} total</span>
-            <span className="text-xs text-gray-400">·</span>
-            <span className="text-xs text-gray-400">{posts.filter(p => p.status === 'approved').length} approved</span>
-            <span className="text-xs text-gray-400">·</span>
-            <span className="text-xs text-orange-500 font-semibold">{posts.filter(p => p.status === 'changes-requested').length} need changes</span>
-          </div>
+          {selectedClient && (
+            <div className="mt-3 flex items-center gap-3">
+              <span className="text-xs text-gray-500">{posts.length} post{posts.length !== 1 ? 's' : ''}</span>
+              <span className="text-xs text-gray-300">·</span>
+              <span className="text-xs text-gray-500">{posts.filter(p => p.status === 'approved').length} approved</span>
+              {posts.filter(p => p.status === 'changes-requested').length > 0 && (
+                <>
+                  <span className="text-xs text-gray-300">·</span>
+                  <span className="text-xs text-orange-600 font-semibold">{posts.filter(p => p.status === 'changes-requested').length} need changes</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
+        {/* Inbox — client responses (shown only when a client is selected) */}
+        {selectedClient && inbox.length > 0 && (
+          <div className="rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-orange-600">
+              Client Activity — {inbox.length} response{inbox.length !== 1 ? 's' : ''} in the last 7 days
+            </p>
+            {inbox.map((post) => {
+              const st = STATUS_STYLES[post.status]
+              return (
+                <div key={post.id} className="flex items-start gap-3 rounded-xl bg-white border border-orange-100 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900 truncate">{post.title}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.colour}`}>{st.label}</span>
+                      {post.respondedAt && <span className="text-[10px] text-gray-400">{timeAgo(post.respondedAt)}</span>}
+                    </div>
+                    {post.clientNote && <p className="mt-1 text-xs text-orange-700 italic">"{post.clientNote}"</p>}
+                  </div>
+                  <button onClick={() => handleEdit(post)}
+                    className="flex-shrink-0 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:border-gray-400">
+                    Edit
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         {/* Add post button */}
-        {!showForm && (
+        {selectedClient && !showForm && (
           <button
             type="button"
             onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyPost(slug)) }}
@@ -424,7 +425,7 @@ export default function CalendarManagePage() {
         )}
 
         {/* Preview toggle */}
-        {sorted.length > 0 && (
+        {selectedClient && sorted.length > 0 && (
           <button
             onClick={() => setShowPreview(p => !p)}
             className={`w-full rounded-2xl border-2 py-3 text-sm font-semibold transition-all ${showPreview ? 'border-[#4f1c1e] bg-[#4f1c1e] text-[#efff72]' : 'border-[#4f1c1e]/30 text-[#4f1c1e] hover:border-[#4f1c1e]'}`}
@@ -433,12 +434,16 @@ export default function CalendarManagePage() {
           </button>
         )}
 
-        {showPreview && (
+        {showPreview && selectedClient && (
           <CalendarPreview posts={posts} clientName={selectedClient} />
         )}
 
         {/* Posts list */}
-        {loading ? (
+        {!selectedClient ? (
+          <div className="rounded-2xl bg-white border border-gray-200 px-5 py-12 text-center text-gray-400">
+            <p className="text-sm font-medium">Select a client above to manage their calendar.</p>
+          </div>
+        ) : loading ? (
           <div className="rounded-2xl bg-white border border-gray-200 px-5 py-10 text-center text-sm text-gray-400">Loading…</div>
         ) : sorted.length === 0 ? (
           <div className="rounded-2xl bg-white border border-gray-200 px-5 py-10 text-center text-sm text-gray-400">No posts yet for {selectedClient}.</div>

@@ -15,6 +15,24 @@ export const CLIENTS = [
   'SITE LOCK SECURITY',
 ] as const
 
+// Organic retainer clients only — shown in the content calendar
+// Remove any paid-media-only clients from this list
+export const CALENDAR_CLIENTS = [
+  'MAMA MANOUSH',
+  'ROWANOS',
+  'CLEAN EATS',
+  'MONTERA SURVEYORS',
+  'MONTERA REAL ESTATE',
+  'BIRDIES & BLUFFS',
+  'CASAS ACTIVEWEAR',
+  "EDDIE'S INN",
+  'THE REALEST ESTATE',
+  'CRYO REMEDY',
+  'SITE LOCK SECURITY',
+] as const
+
+export type CalendarClient = typeof CALENDAR_CLIENTS[number]
+
 export const PLATFORMS = ['INSTAGRAM', 'TIKTOK', 'FACEBOOK', 'LINKEDLN', 'YOUTUBE'] as const
 
 export const VIDEO_FORMATS = [
