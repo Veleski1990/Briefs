@@ -124,11 +124,29 @@ export default async function DashboardPage() {
 
         {/* Header */}
         <div className="rounded-2xl bg-[#4f1c1e] px-6 py-5 shadow-lg">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#efff72]/70">Creative AI Media</p>
-          <h1 className="font-heading text-4xl text-white">Edit Dashboard</h1>
-          <p className="mt-1 text-sm text-white/60">
-            {activeClients.length} active client{activeClients.length !== 1 ? 's' : ''} · {doneClients.length} completed
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#efff72]/70">Creative AI Media</p>
+              <h1 className="font-heading text-4xl text-white">Edit Dashboard</h1>
+              <p className="mt-1 text-sm text-white/60">
+                {activeClients.length} active client{activeClients.length !== 1 ? 's' : ''} · {doneClients.length} completed
+              </p>
+            </div>
+            <div className="flex flex-shrink-0 flex-wrap gap-2 pt-1">
+              <Link href="/"
+                className="rounded-lg bg-[#efff72] px-3 py-1.5 text-xs font-semibold text-[#4f1c1e] hover:opacity-90 transition-opacity">
+                + New Brief
+              </Link>
+              <Link href="/clients"
+                className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-colors">
+                Client Profiles
+              </Link>
+              <Link href="/calendar/manage"
+                className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-colors">
+                Content Calendar
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Video-level status summary */}
@@ -276,21 +294,6 @@ export default async function DashboardPage() {
           </details>
         )}
 
-        {/* Nav */}
-        <div className="flex flex-wrap gap-3 pb-4">
-          <Link href="/"
-            className="rounded-xl bg-[#4f1c1e] px-4 py-2.5 text-sm font-semibold text-[#efff72] hover:opacity-90 transition-opacity">
-            + New Brief
-          </Link>
-          <Link href="/clients"
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 hover:border-gray-400 transition-colors">
-            Client Profiles
-          </Link>
-          <Link href="/calendar/manage"
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 hover:border-gray-400 transition-colors">
-            Content Calendar
-          </Link>
-        </div>
 
       </div>
     </div>
