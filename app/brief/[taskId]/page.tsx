@@ -3,6 +3,7 @@ import type { StoredBrief, VideoRow, BriefStatus, ClientProfile } from '@/lib/ty
 import { FUNNEL_STAGE_DESCRIPTIONS } from '@/lib/constants'
 import { notFound } from 'next/navigation'
 import { VideoStatusButton, BulkStatusBar } from './StatusControls'
+import SubmitAssetButton from './SubmitAssetButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -193,11 +194,13 @@ function VideoCard({
   index,
   taskId,
   status,
+  assetUrl,
 }: {
   video: VideoRow
   index: number
   taskId: string
   status: BriefStatus
+  assetUrl?: string
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -223,10 +226,12 @@ function VideoCard({
             )}
           </div>
         </div>
-        {/* Status controls — right here at the top */}
+        {/* Status controls */}
         <div className="mt-3 border-t border-white/10 pt-3">
           <VideoStatusButton taskId={taskId} videoId={video.id} initialStatus={status} />
         </div>
+        {/* Editor asset submission */}
+        <SubmitAssetButton taskId={taskId} videoId={video.id} existingUrl={assetUrl} />
       </div>
 
       <div className="divide-y divide-gray-100">
@@ -387,6 +392,7 @@ export default async function BriefPage({ params }: { params: Promise<{ taskId: 
               index={i}
               taskId={taskId}
               status={videoStatuses?.[video.id] ?? 'in-edit'}
+              assetUrl={stored.videoAssetUrls?.[video.id]}
             />
           ))}
         </div>

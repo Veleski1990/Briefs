@@ -85,6 +85,8 @@ export interface StoredBrief {
   videoStatuses: Record<string, BriefStatus>
   // ClickUp subtask IDs keyed by video.id
   videoSubtaskIds: Record<string, string>
+  // final asset links submitted by editor, keyed by video.id
+  videoAssetUrls?: Record<string, string>
   // snapshot of client style guide at submission time
   clientProfile: ClientProfile | null
 }

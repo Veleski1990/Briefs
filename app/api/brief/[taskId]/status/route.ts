@@ -19,7 +19,7 @@ export async function POST(
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   const { taskId } = await params
-  const { videoId, status } = (await request.json()) as { videoId: string; status: BriefStatus }
+  const { videoId, status, assetUrl } = (await request.json()) as { videoId: string; status: BriefStatus; assetUrl?: string }
 
   if (!videoId || !VALID_STATUSES.includes(status)) {
     return NextResponse.json({ error: 'Invalid videoId or status' }, { status: 400 })
@@ -41,6 +41,12 @@ export async function POST(
   // Update this video's status
   if (!stored.videoStatuses) stored.videoStatuses = {}
   stored.videoStatuses[videoId] = status
+
+  // Save asset URL if provided
+  if (assetUrl) {
+    if (!stored.videoAssetUrls) stored.videoAssetUrls = {}
+    stored.videoAssetUrls[videoId] = assetUrl
+  }
 
   await redis.set(`brief:${taskId}`, JSON.stringify(stored), 'KEEPTTL')
   await redis.quit()
