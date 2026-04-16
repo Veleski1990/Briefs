@@ -241,6 +241,9 @@ export default async function DashboardPage() {
                               {v.duration && (
                                 <span className="text-[10px] text-gray-400">{v.duration}</span>
                               )}
+                              {v.angleObjective && (
+                                <span className="text-xs text-gray-500 truncate max-w-[300px]">{v.angleObjective}</span>
+                              )}
                               {v.deadline && (
                                 <span className="text-[10px] text-gray-400">Due {formatShootDate(v.deadline)}</span>
                               )}
