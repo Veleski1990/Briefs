@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { CALENDAR_CLIENTS } from '@/lib/constants'
 import type { CalendarClient } from '@/lib/constants'
 import { clientToSlug, slugToDisplay, STATUS_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
+import ScheduleGenerator from './ScheduleGenerator'
 import type { CalendarPost, PostFormat, PostCategory, PostStatus } from '@/lib/calendar-types'
 
 // ── Mini calendar preview (same grid logic as client page) ──
@@ -351,15 +352,22 @@ export default function CalendarManagePage() {
           </div>
         )}
 
-        {/* Add post button */}
+        {/* Add post / generate schedule */}
         {selectedClient && !showForm && (
-          <button
-            type="button"
-            onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyPost(slug)) }}
-            className="w-full rounded-2xl border-2 border-dashed border-[#4f1c1e]/30 py-4 text-sm font-semibold text-[#4f1c1e] hover:border-[#4f1c1e] transition-colors"
-          >
-            + Add Post
-          </button>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyPost(slug)) }}
+              className="w-full rounded-2xl border-2 border-dashed border-[#4f1c1e]/30 py-3 text-sm font-semibold text-[#4f1c1e] hover:border-[#4f1c1e] transition-colors"
+            >
+              + Add Single Post
+            </button>
+            <ScheduleGenerator
+              slug={slug}
+              clientName={selectedClient}
+              onGenerated={(newPosts) => setPosts(prev => [...prev, ...newPosts])}
+            />
+          </div>
         )}
 
         {/* Post form */}
