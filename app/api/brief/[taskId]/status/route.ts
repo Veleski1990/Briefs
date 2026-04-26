@@ -48,6 +48,19 @@ export async function POST(
     stored.videoAssetUrls[videoId] = assetUrl
   }
 
+  // Record when a video is first approved
+  if (status === 'approved') {
+    if (!stored.videoApprovedAt) stored.videoApprovedAt = {}
+    if (!stored.videoApprovedAt[videoId]) {
+      stored.videoApprovedAt[videoId] = new Date().toISOString()
+    }
+  } else {
+    // Clear approvedAt if status moves away from approved
+    if (stored.videoApprovedAt?.[videoId]) {
+      delete stored.videoApprovedAt[videoId]
+    }
+  }
+
   await redis.set(`brief:${taskId}`, JSON.stringify(stored), 'KEEPTTL')
   await redis.quit()
 

@@ -2,6 +2,7 @@ import { getRedis } from '@/lib/redis'
 import type { StoredBrief, BriefStatus } from '@/lib/types'
 import Link from 'next/link'
 import DeleteButton from './DeleteButton'
+import VideoRow from './VideoRow'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,13 @@ async function getAllBriefs(): Promise<StoredBrief[]> {
 
 const DONE_STATUSES = new Set<BriefStatus>(['approved', 'scheduled'])
 function isVideoDone(s: BriefStatus) { return DONE_STATUSES.has(s) }
+
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000
+function isApprovedAndOld(status: BriefStatus, approvedAt?: string): boolean {
+  if (status !== 'approved') return false
+  if (!approvedAt) return false
+  return Date.now() - new Date(approvedAt).getTime() > THREE_DAYS_MS
+}
 function urgencyScore(statuses: BriefStatus[]): number {
   if (statuses.some(s => s === 'amendments')) return 4
   if (statuses.some(s => s === 'in-review')) return 3
@@ -207,39 +215,27 @@ export default async function DashboardPage({
               {clientBriefs
                 .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
                 .flatMap((stored) => {
-                  const { brief, taskId, briefUrl, videoStatuses, videoAssetUrls } = stored
-                  return brief.videos.map((v, i) => {
-                    const s = (videoStatuses ?? {})[v.id] ?? 'not-started'
-                    const assetUrl = videoAssetUrls?.[v.id]
-                    const isDone = isVideoDone(s)
-                    return (
-                      <div key={`${taskId}-${v.id}`}
-                        className={`flex items-start gap-3 px-5 py-3 ${isDone ? 'opacity-40' : ''}`}>
-                        <span className={`mt-1 flex-shrink-0 h-2.5 w-2.5 rounded-full ${STATUS_DOT[s]}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className={`text-xs font-bold uppercase tracking-wide ${isDone ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {v.format || 'TBD'}{v.duration ? ` · ${v.duration}` : ''}
-                            </span>
-                            {assetUrl && (
-                              <a href={assetUrl} target="_blank" rel="noopener noreferrer"
-                                className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800 hover:bg-purple-200">
-                                Asset ready →
-                              </a>
-                            )}
-                          </div>
-                          {v.angleObjective && (
-                            <p className={`text-sm mt-0.5 leading-snug ${isDone ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800 font-medium'}`}>
-                              {v.angleObjective}
-                            </p>
-                          )}
-                        </div>
-                        <span className={`flex-shrink-0 self-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_PILL[s]}`}>
-                          {STATUS_LABEL[s]}
-                        </span>
-                      </div>
-                    )
-                  })
+                  const { brief, taskId, videoStatuses, videoAssetUrls, videoApprovedAt } = stored
+                  return brief.videos
+                    .filter(v => {
+                      const s = (videoStatuses ?? {})[v.id] ?? 'not-started'
+                      return !isApprovedAndOld(s, videoApprovedAt?.[v.id])
+                    })
+                    .map((v) => {
+                      const s = (videoStatuses ?? {})[v.id] ?? 'not-started'
+                      return (
+                        <VideoRow
+                          key={`${taskId}-${v.id}`}
+                          taskId={taskId}
+                          videoId={v.id}
+                          format={v.format}
+                          duration={v.duration}
+                          angleObjective={v.angleObjective}
+                          initialStatus={s}
+                          assetUrl={videoAssetUrls?.[v.id]}
+                        />
+                      )
+                    })
                 })}
             </div>
           </div>

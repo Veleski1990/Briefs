@@ -87,6 +87,8 @@ export interface StoredBrief {
   videoSubtaskIds: Record<string, string>
   // final asset links submitted by editor, keyed by video.id
   videoAssetUrls?: Record<string, string>
+  // timestamp when each video was set to approved, keyed by video.id
+  videoApprovedAt?: Record<string, string>
   // snapshot of client style guide at submission time
   clientProfile: ClientProfile | null
 }
