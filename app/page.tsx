@@ -117,12 +117,21 @@ export default function BriefPage() {
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
   const [result, setResult] = useState<SubmitBriefResponse | null>(null)
   const [clientProfiles, setClientProfiles] = useState<Record<string, unknown>>({})
+  const [allClients, setAllClients] = useState<string[]>([...CLIENTS])
   const videoCounter = useRef(2)
 
   // Set date fields on client only to avoid SSR/client mismatch
   useEffect(() => {
     const t = today()
     setForm((prev) => ({ ...prev, shootDate: t, dateSent: t }))
+  }, [])
+
+  // Load client list (includes any custom clients added via /clients)
+  useEffect(() => {
+    fetch('/api/clients')
+      .then((r) => r.json())
+      .then((list: string[]) => setAllClients(list))
+      .catch(() => {})
   }, [])
 
   // Load client profiles
@@ -277,7 +286,7 @@ export default function BriefPage() {
                 id="client"
                 label="Client"
                 value={form.client}
-                options={CLIENTS}
+                options={allClients}
                 onChange={(v) => setField('client', v as BriefFormData['client'])}
                 required
               />

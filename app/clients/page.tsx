@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { CLIENTS } from '@/lib/constants'
 
 interface ClientProfile {
   musicStyle: string
@@ -36,21 +35,28 @@ function emptyProfile(): ClientProfile {
 }
 
 export default function ClientsPage() {
+  const [clients, setClients] = useState<string[]>([])
   const [profiles, setProfiles] = useState<AllProfiles>({})
-  const [selected, setSelected] = useState<string>(CLIENTS[0])
+  const [selected, setSelected] = useState<string>('')
   const [form, setForm] = useState<ClientProfile>(emptyProfile())
   const [dosInput, setDosInput] = useState('')
   const [dontsInput, setDontsInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [newClientName, setNewClientName] = useState('')
+  const [addingClient, setAddingClient] = useState(false)
+  const [addError, setAddError] = useState('')
 
-  // Read ?edit=ClientName from URL
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const edit = params.get('edit')
-    if (edit && CLIENTS.includes(edit as typeof CLIENTS[number])) {
-      setSelected(edit)
-    }
+    fetch('/api/clients')
+      .then((r) => r.json())
+      .then((list: string[]) => {
+        setClients(list)
+        // Read ?edit=ClientName from URL or default to first
+        const params = new URLSearchParams(window.location.search)
+        const edit = params.get('edit')
+        setSelected(edit && list.includes(edit) ? edit : list[0] ?? '')
+      })
   }, [])
 
   useEffect(() => {
@@ -74,6 +80,28 @@ export default function ClientsPage() {
 
   const setField = (key: keyof ClientProfile, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const addClient = async () => {
+    const name = newClientName.trim()
+    if (!name) return
+    setAddingClient(true)
+    setAddError('')
+    const res = await fetch('/api/clients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setAddError(data.error ?? 'Failed to add client')
+      setAddingClient(false)
+      return
+    }
+    setClients(data.clients)
+    setSelected(name.trim().toUpperCase())
+    setNewClientName('')
+    setAddingClient(false)
   }
 
   const handleSave = useCallback(async () => {
@@ -113,10 +141,10 @@ export default function ClientsPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           {/* Client list */}
-          <div className="rounded-xl border border-brand-border bg-brand-surface p-3 shadow-sm sm:col-span-1">
-            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-widest text-brand-muted">Clients</p>
-            <ul className="space-y-0.5">
-              {CLIENTS.map((c) => {
+          <div className="rounded-xl border border-brand-border bg-brand-surface p-3 shadow-sm sm:col-span-1 self-start">
+            <p className="px-2 text-xs font-semibold uppercase tracking-widest text-brand-muted">Clients</p>
+            <ul className="space-y-0.5 mb-1">
+              {clients.map((c) => {
                 const hasProfile = profiles[c] && (
                   profiles[c].musicStyle || profiles[c].generalNotes || profiles[c].dos.length > 0
                 )
@@ -138,6 +166,27 @@ export default function ClientsPage() {
                 )
               })}
             </ul>
+
+            {/* Add new client */}
+            <div className="border-t border-brand-border pt-2 space-y-1.5">
+              <input
+                type="text"
+                value={newClientName}
+                onChange={(e) => { setNewClientName(e.target.value); setAddError('') }}
+                onKeyDown={(e) => e.key === 'Enter' && addClient()}
+                placeholder="New client name…"
+                className="w-full rounded-lg border border-brand-border bg-white px-2 py-1.5 text-xs text-brand-text placeholder-brand-muted focus:border-brand-maroon focus:outline-none"
+              />
+              {addError && <p className="text-[10px] text-red-500">{addError}</p>}
+              <button
+                type="button"
+                onClick={addClient}
+                disabled={addingClient || !newClientName.trim()}
+                className="w-full rounded-lg bg-brand-maroon px-2 py-1.5 text-xs font-semibold text-brand-accent hover:opacity-90 disabled:opacity-40 transition-all"
+              >
+                {addingClient ? 'Adding…' : '+ Add Client'}
+              </button>
+            </div>
           </div>
 
           {/* Profile editor */}

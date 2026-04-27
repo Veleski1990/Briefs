@@ -25,8 +25,8 @@ export interface BriefFormData {
   // Pipeline
   pipeline: Pipeline | ''
 
-  // Header
-  client: Client | ''
+  // Header — string to support dynamically added clients
+  client: string
   shootDate: string
   briefFilledBy: string
   dateSent: string
