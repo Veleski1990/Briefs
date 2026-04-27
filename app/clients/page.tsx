@@ -142,8 +142,31 @@ export default function ClientsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           {/* Client list */}
           <div className="rounded-xl border border-brand-border bg-brand-surface p-3 shadow-sm sm:col-span-1 self-start">
-            <p className="px-2 text-xs font-semibold uppercase tracking-widest text-brand-muted">Clients</p>
-            <ul className="space-y-0.5 mb-1">
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-widest text-brand-muted">Clients</p>
+
+            {/* Add new client */}
+            <div className="mb-3 space-y-1.5">
+              <input
+                type="text"
+                value={newClientName}
+                onChange={(e) => { setNewClientName(e.target.value); setAddError('') }}
+                onKeyDown={(e) => e.key === 'Enter' && addClient()}
+                placeholder="New client name…"
+                className="w-full rounded-lg border border-brand-border bg-white px-2 py-1.5 text-xs text-brand-text placeholder-brand-muted focus:border-brand-maroon focus:outline-none"
+              />
+              {addError && <p className="text-[10px] text-red-500">{addError}</p>}
+              <button
+                type="button"
+                onClick={addClient}
+                disabled={addingClient || !newClientName.trim()}
+                className="w-full rounded-lg bg-brand-maroon px-2 py-1.5 text-xs font-semibold text-brand-accent hover:opacity-90 disabled:opacity-40 transition-all"
+              >
+                {addingClient ? 'Adding…' : '+ Add Client'}
+              </button>
+            </div>
+
+            <div className="border-t border-brand-border pt-2">
+            <ul className="space-y-0.5">
               {clients.map((c) => {
                 const hasProfile = profiles[c] && (
                   profiles[c].musicStyle || profiles[c].generalNotes || profiles[c].dos.length > 0
@@ -166,26 +189,6 @@ export default function ClientsPage() {
                 )
               })}
             </ul>
-
-            {/* Add new client */}
-            <div className="border-t border-brand-border pt-2 space-y-1.5">
-              <input
-                type="text"
-                value={newClientName}
-                onChange={(e) => { setNewClientName(e.target.value); setAddError('') }}
-                onKeyDown={(e) => e.key === 'Enter' && addClient()}
-                placeholder="New client name…"
-                className="w-full rounded-lg border border-brand-border bg-white px-2 py-1.5 text-xs text-brand-text placeholder-brand-muted focus:border-brand-maroon focus:outline-none"
-              />
-              {addError && <p className="text-[10px] text-red-500">{addError}</p>}
-              <button
-                type="button"
-                onClick={addClient}
-                disabled={addingClient || !newClientName.trim()}
-                className="w-full rounded-lg bg-brand-maroon px-2 py-1.5 text-xs font-semibold text-brand-accent hover:opacity-90 disabled:opacity-40 transition-all"
-              >
-                {addingClient ? 'Adding…' : '+ Add Client'}
-              </button>
             </div>
           </div>
 
