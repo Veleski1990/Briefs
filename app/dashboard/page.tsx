@@ -137,6 +137,9 @@ export default async function DashboardPage({
               <Link href="/" className="rounded-lg bg-[#efff72] px-3 py-1.5 text-xs font-semibold text-[#4f1c1e] hover:opacity-90 transition-opacity">
                 + New Brief
               </Link>
+              <Link href="/clients?new=1" className="rounded-lg bg-[#efff72]/20 px-3 py-1.5 text-xs font-semibold text-[#efff72] hover:bg-[#efff72]/30 transition-colors">
+                + New Client
+              </Link>
               <Link href="/clients" className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition-colors">
                 Client Profiles
               </Link>

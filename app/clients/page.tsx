@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 interface ClientProfile {
   musicStyle: string
@@ -46,16 +46,19 @@ export default function ClientsPage() {
   const [newClientName, setNewClientName] = useState('')
   const [addingClient, setAddingClient] = useState(false)
   const [addError, setAddError] = useState('')
+  const newClientInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/clients')
       .then((r) => r.json())
       .then((list: string[]) => {
         setClients(list)
-        // Read ?edit=ClientName from URL or default to first
         const params = new URLSearchParams(window.location.search)
         const edit = params.get('edit')
         setSelected(edit && list.includes(edit) ? edit : list[0] ?? '')
+        if (params.get('new') === '1') {
+          setTimeout(() => newClientInputRef.current?.focus(), 100)
+        }
       })
   }, [])
 
@@ -147,6 +150,7 @@ export default function ClientsPage() {
             {/* Add new client */}
             <div className="mb-3 space-y-1.5">
               <input
+                ref={newClientInputRef}
                 type="text"
                 value={newClientName}
                 onChange={(e) => { setNewClientName(e.target.value); setAddError('') }}
