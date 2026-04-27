@@ -25,12 +25,6 @@ async function getAllBriefs(): Promise<StoredBrief[]> {
 const DONE_STATUSES = new Set<BriefStatus>(['approved', 'scheduled'])
 function isVideoDone(s: BriefStatus) { return DONE_STATUSES.has(s) }
 
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000
-function isApprovedAndOld(status: BriefStatus, approvedAt?: string): boolean {
-  if (status !== 'approved') return false
-  if (!approvedAt) return false
-  return Date.now() - new Date(approvedAt).getTime() > THREE_DAYS_MS
-}
 function urgencyScore(statuses: BriefStatus[]): number {
   if (statuses.some(s => s === 'amendments')) return 4
   if (statuses.some(s => s === 'in-review')) return 3
@@ -199,50 +193,58 @@ export default async function DashboardPage({
           </div>
         )}
 
-        {activeClients.map(({ client, briefs: clientBriefs }) => (
-          <div key={client} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            {/* Client header */}
-            <div className="flex items-center justify-between bg-[#4f1c1e]/5 border-b border-gray-200 px-5 py-3">
-              <h2 className="font-heading text-xl text-[#4f1c1e]">{client}</h2>
-              <Link
-                href={clientBriefs[0]?.briefUrl || `/brief/${clientBriefs[0]?.taskId}`}
-                target="_blank"
-                className="text-xs font-semibold text-[#4f1c1e] hover:underline"
-              >
-                Brief →
-              </Link>
-            </div>
+        {activeClients.map(({ client, briefs: clientBriefs }) => {
+          const entries = clientBriefs
+            .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
+            .flatMap((stored) => {
+              const { brief, taskId, videoStatuses, videoAssetUrls } = stored
+              return brief.videos.map(v => ({
+                v, taskId,
+                s: (videoStatuses ?? {})[v.id] ?? 'not-started' as BriefStatus,
+                assetUrl: videoAssetUrls?.[v.id],
+              }))
+            })
 
-            {/* All videos across all briefs for this client */}
-            <div className="divide-y divide-gray-100">
-              {clientBriefs
-                .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
-                .flatMap((stored) => {
-                  const { brief, taskId, videoStatuses, videoAssetUrls, videoApprovedAt } = stored
-                  return brief.videos
-                    .filter(v => {
-                      const s = (videoStatuses ?? {})[v.id] ?? 'not-started'
-                      return !isApprovedAndOld(s, videoApprovedAt?.[v.id])
-                    })
-                    .map((v) => {
-                      const s = (videoStatuses ?? {})[v.id] ?? 'not-started'
-                      return (
-                        <VideoRow
-                          key={`${taskId}-${v.id}`}
-                          taskId={taskId}
-                          videoId={v.id}
-                          format={v.format}
-                          duration={v.duration}
-                          angleObjective={v.angleObjective}
-                          initialStatus={s}
-                          assetUrl={videoAssetUrls?.[v.id]}
-                        />
-                      )
-                    })
-                })}
+          const active = entries.filter(({ s }) => s !== 'approved' && s !== 'scheduled')
+          const doneCount = entries.length - active.length
+
+          return (
+            <div key={client} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+              {/* Client header */}
+              <div className="flex items-center justify-between bg-[#4f1c1e]/5 border-b border-gray-200 px-5 py-3">
+                <h2 className="font-heading text-xl text-[#4f1c1e]">{client}</h2>
+                <div className="flex items-center gap-3">
+                  {doneCount > 0 && (
+                    <span className="text-xs font-medium text-gray-400">{doneCount} approved</span>
+                  )}
+                  <Link
+                    href={clientBriefs[0]?.briefUrl || `/brief/${clientBriefs[0]?.taskId}`}
+                    target="_blank"
+                    className="text-xs font-semibold text-[#4f1c1e] hover:underline"
+                  >
+                    Brief →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Active videos only — approved/scheduled hidden */}
+              <div className="divide-y divide-gray-100">
+                {active.map(({ v, taskId, s, assetUrl }) => (
+                  <VideoRow
+                    key={`${taskId}-${v.id}`}
+                    taskId={taskId}
+                    videoId={v.id}
+                    format={v.format}
+                    duration={v.duration}
+                    angleObjective={v.angleObjective}
+                    initialStatus={s}
+                    assetUrl={assetUrl}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {/* Completed clients — collapsed */}
         {doneClients.length > 0 && (
