@@ -3,6 +3,7 @@ import { getRedis } from '@/lib/redis'
 import { CLIENTS } from '@/lib/constants'
 
 const KEY = 'clients:custom'
+const PROFILES_KEY = 'client-profiles'
 
 export async function GET() {
   const redis = await getRedis()
@@ -39,5 +40,42 @@ export async function POST(request: NextRequest) {
   await redis.set(KEY, JSON.stringify(custom))
   await redis.quit()
 
+  return NextResponse.json({ success: true, clients: [...CLIENTS, ...custom] })
+}
+
+export async function PATCH(request: NextRequest) {
+  const { oldName, newName } = (await request.json()) as { oldName: string; newName: string }
+  const trimmed = newName?.trim().toUpperCase()
+
+  if (!trimmed || trimmed.length < 2) {
+    return NextResponse.json({ error: 'Name too short' }, { status: 400 })
+  }
+  if (CLIENTS.includes(oldName as typeof CLIENTS[number])) {
+    return NextResponse.json({ error: 'Built-in clients cannot be renamed' }, { status: 400 })
+  }
+
+  const redis = await getRedis()
+  if (!redis) return NextResponse.json({ error: 'Storage unavailable' }, { status: 503 })
+
+  const raw = await redis.get(KEY)
+  const custom: string[] = raw ? JSON.parse(raw) : []
+  const idx = custom.indexOf(oldName)
+  if (idx === -1) { await redis.quit(); return NextResponse.json({ error: 'Client not found' }, { status: 404 }) }
+
+  custom[idx] = trimmed
+  await redis.set(KEY, JSON.stringify(custom))
+
+  // Move profile data to new name
+  const profilesRaw = await redis.get(PROFILES_KEY)
+  if (profilesRaw) {
+    const profiles = JSON.parse(profilesRaw)
+    if (profiles[oldName]) {
+      profiles[trimmed] = profiles[oldName]
+      delete profiles[oldName]
+      await redis.set(PROFILES_KEY, JSON.stringify(profiles))
+    }
+  }
+
+  await redis.quit()
   return NextResponse.json({ success: true, clients: [...CLIENTS, ...custom] })
 }

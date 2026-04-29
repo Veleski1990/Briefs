@@ -1,15 +1,18 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { CLIENTS } from '@/lib/constants'
+
+const BUILTIN = new Set<string>(CLIENTS)
 
 interface ClientProfile {
   musicStyle: string
   editingPace: string
   colourCodes: string
   captionFont: string
-  captionFontImageUrl: string
+  captionFontImageUrls: string[]
   overlayFont: string
-  overlayFontImageUrl: string
+  overlayFontImageUrls: string[]
   logoUrl: string
   dos: string[]
   donts: string[]
@@ -24,9 +27,9 @@ function emptyProfile(): ClientProfile {
     editingPace: '',
     colourCodes: '',
     captionFont: '',
-    captionFontImageUrl: '',
+    captionFontImageUrls: [],
     overlayFont: '',
-    overlayFontImageUrl: '',
+    overlayFontImageUrls: [],
     logoUrl: '',
     dos: [],
     donts: [],
@@ -47,6 +50,11 @@ export default function ClientsPage() {
   const [addingClient, setAddingClient] = useState(false)
   const [addError, setAddError] = useState('')
   const newClientInputRef = useRef<HTMLInputElement>(null)
+  const [renamingClient, setRenamingClient] = useState(false)
+  const [renameValue, setRenameValue] = useState('')
+  const [renameError, setRenameError] = useState('')
+  const [savingRename, setSavingRename] = useState(false)
+
 
   useEffect(() => {
     fetch('/api/clients')
@@ -71,7 +79,12 @@ export default function ClientsPage() {
   useEffect(() => {
     const p = profiles[selected]
     if (p) {
-      setForm(p)
+      setForm({
+        ...emptyProfile(),
+        ...p,
+        captionFontImageUrls: Array.isArray(p.captionFontImageUrls) ? p.captionFontImageUrls : [],
+        overlayFontImageUrls: Array.isArray(p.overlayFontImageUrls) ? p.overlayFontImageUrls : [],
+      })
       setDosInput(p.dos.join('\n'))
       setDontsInput(p.donts.join('\n'))
     } else {
@@ -105,6 +118,31 @@ export default function ClientsPage() {
     setSelected(name.trim().toUpperCase())
     setNewClientName('')
     setAddingClient(false)
+  }
+
+  const startRename = () => { setRenameValue(selected); setRenamingClient(true); setRenameError('') }
+  const cancelRename = () => { setRenamingClient(false); setRenameError('') }
+
+  const saveRename = async () => {
+    const newName = renameValue.trim().toUpperCase()
+    if (!newName || newName === selected) { cancelRename(); return }
+    setSavingRename(true)
+    const res = await fetch('/api/clients', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldName: selected, newName }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setRenameError(data.error ?? 'Failed'); setSavingRename(false); return }
+    setClients(data.clients)
+    setSelected(newName)
+    setProfiles(prev => {
+      const next = { ...prev }
+      if (next[selected]) { next[newName] = next[selected]; delete next[selected] }
+      return next
+    })
+    setRenamingClient(false)
+    setSavingRename(false)
   }
 
   const handleSave = useCallback(async () => {
@@ -199,8 +237,34 @@ export default function ClientsPage() {
           {/* Profile editor */}
           <div className="rounded-xl border border-brand-border bg-brand-surface p-6 shadow-sm sm:col-span-3">
             <div className="mb-5 border-b border-brand-border pb-3">
-              <h2 className="text-base font-semibold text-brand-dark">{selected}</h2>
-              <p className="text-xs text-brand-muted">Style preferences for the editor</p>
+              {renamingClient ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={e => { setRenameValue(e.target.value); setRenameError('') }}
+                    onKeyDown={e => { if (e.key === 'Enter') saveRename(); if (e.key === 'Escape') cancelRename() }}
+                    className="flex-1 rounded-lg border border-brand-maroon bg-white px-3 py-1.5 text-sm font-semibold text-brand-dark focus:outline-none"
+                  />
+                  <button onClick={saveRename} disabled={savingRename} className="rounded-lg bg-brand-maroon px-3 py-1.5 text-xs font-semibold text-brand-accent disabled:opacity-50">
+                    {savingRename ? '…' : 'Save'}
+                  </button>
+                  <button onClick={cancelRename} className="rounded-lg border border-brand-border px-3 py-1.5 text-xs text-brand-muted hover:text-brand-text">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-semibold text-brand-dark">{selected}</h2>
+                  {!BUILTIN.has(selected) && (
+                    <button onClick={startRename} className="text-xs text-brand-muted hover:text-brand-maroon underline">
+                      Rename
+                    </button>
+                  )}
+                </div>
+              )}
+              {renameError && <p className="mt-1 text-xs text-red-500">{renameError}</p>}
+              <p className="text-xs text-brand-muted mt-0.5">Style preferences for the editor</p>
             </div>
 
             <div className="space-y-4">
@@ -288,27 +352,26 @@ export default function ClientsPage() {
                   onChange={(e) => setField('captionFont', e.target.value)}
                   placeholder="e.g. ZY Resolve Caps, white, all-caps"
                 />
-                <div>
-                  <label className="mb-1.5 block text-xs text-brand-muted">Reference image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      const reader = new FileReader()
-                      reader.onload = () => setField('captionFontImageUrl', reader.result as string)
-                      reader.readAsDataURL(file)
-                    }}
-                  />
-                  {form.captionFontImageUrl && (
-                    <div className="mt-2 relative">
-                      <img src={form.captionFontImageUrl} alt="Caption font reference" className="max-h-40 w-full rounded-lg border border-brand-border object-contain bg-gray-50" />
-                      <button type="button" onClick={() => setField('captionFontImageUrl', '')}
+                <div className="space-y-2">
+                  <label className="block text-xs text-brand-muted">Reference images</label>
+                  {form.captionFontImageUrls.map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url} alt={`Caption ref ${i + 1}`} className="max-h-40 w-full rounded-lg border border-brand-border object-contain bg-gray-50" />
+                      <button type="button"
+                        onClick={() => setForm(f => ({ ...f, captionFontImageUrls: f.captionFontImageUrls.filter((_, j) => j !== i) }))}
                         className="absolute top-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white hover:bg-black/70">Remove</button>
                     </div>
-                  )}
+                  ))}
+                  <input type="file" accept="image/*"
+                    className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]; if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = () => setForm(f => ({ ...f, captionFontImageUrls: [...f.captionFontImageUrls, reader.result as string] }))
+                      reader.readAsDataURL(file)
+                      e.target.value = ''
+                    }}
+                  />
                 </div>
               </div>
 
@@ -321,27 +384,26 @@ export default function ClientsPage() {
                   onChange={(e) => setField('overlayFont', e.target.value)}
                   placeholder="e.g. Bebas Neue, yellow, bold — used for on-screen text and CTAs"
                 />
-                <div>
-                  <label className="mb-1.5 block text-xs text-brand-muted">Reference image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      const reader = new FileReader()
-                      reader.onload = () => setField('overlayFontImageUrl', reader.result as string)
-                      reader.readAsDataURL(file)
-                    }}
-                  />
-                  {form.overlayFontImageUrl && (
-                    <div className="mt-2 relative">
-                      <img src={form.overlayFontImageUrl} alt="Overlay font reference" className="max-h-40 w-full rounded-lg border border-brand-border object-contain bg-gray-50" />
-                      <button type="button" onClick={() => setField('overlayFontImageUrl', '')}
+                <div className="space-y-2">
+                  <label className="block text-xs text-brand-muted">Reference images</label>
+                  {form.overlayFontImageUrls.map((url, i) => (
+                    <div key={i} className="relative">
+                      <img src={url} alt={`Overlay ref ${i + 1}`} className="max-h-40 w-full rounded-lg border border-brand-border object-contain bg-gray-50" />
+                      <button type="button"
+                        onClick={() => setForm(f => ({ ...f, overlayFontImageUrls: f.overlayFontImageUrls.filter((_, j) => j !== i) }))}
                         className="absolute top-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white hover:bg-black/70">Remove</button>
                     </div>
-                  )}
+                  ))}
+                  <input type="file" accept="image/*"
+                    className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]; if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = () => setForm(f => ({ ...f, overlayFontImageUrls: [...f.overlayFontImageUrls, reader.result as string] }))
+                      reader.readAsDataURL(file)
+                      e.target.value = ''
+                    }}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

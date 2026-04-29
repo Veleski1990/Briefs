@@ -5,9 +5,9 @@ interface ClientProfile {
   editingPace: string
   colourCodes: string
   captionFont: string
-  captionFontImageUrl: string
+  captionFontImageUrls: string[]
   overlayFont: string
-  overlayFontImageUrl: string
+  overlayFontImageUrls: string[]
   logoUrl: string
   dos: string[]
   donts: string[]
@@ -29,17 +29,20 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ImageRow({ label, url }: { label: string; url: string }) {
-  if (!url) return null
+function ImageRow({ label, urls }: { label: string; urls: string[] }) {
+  const valid = urls.filter(Boolean)
+  if (valid.length === 0) return null
   return (
     <div className="flex gap-3">
       <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">{label}</span>
-      <img
-        src={url}
-        alt={label}
-        className="max-h-28 rounded border border-brand-border object-contain bg-gray-50"
-        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-      />
+      <div className="flex flex-wrap gap-2">
+        {valid.map((url, i) => (
+          <img key={i} src={url} alt={`${label} ${i + 1}`}
+            className="max-h-28 rounded border border-brand-border object-contain bg-gray-50"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -51,9 +54,9 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
       !profile.editingPace &&
       !profile.colourCodes &&
       !profile.captionFont &&
-      !profile.captionFontImageUrl &&
+      (!profile.captionFontImageUrls || profile.captionFontImageUrls.length === 0) &&
       !profile.overlayFont &&
-      !profile.overlayFontImageUrl &&
+      (!profile.overlayFontImageUrls || profile.overlayFontImageUrls.length === 0) &&
       !profile.logoUrl &&
       !profile.generalNotes &&
       profile.dos.length === 0 &&
@@ -99,9 +102,9 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
           <Row label="Pacing" value={profile.editingPace} />
           <Row label="Colour Codes" value={profile.colourCodes} />
           <Row label="Caption Font" value={profile.captionFont} />
-          <ImageRow label="Caption Ref" url={profile.captionFontImageUrl} />
+          <ImageRow label="Caption Ref" urls={profile.captionFontImageUrls ?? []} />
           <Row label="Overlay Font" value={profile.overlayFont} />
-          <ImageRow label="Overlay Ref" url={profile.overlayFontImageUrl} />
+          <ImageRow label="Overlay Ref" urls={profile.overlayFontImageUrls ?? []} />
           {profile.dos.length > 0 && (
             <div className="flex gap-3">
               <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Do</span>

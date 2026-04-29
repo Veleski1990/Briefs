@@ -24,20 +24,26 @@ function writeLocalProfiles(data: unknown) {
   writeFileSync(join(process.cwd(), 'lib', 'client-profiles.json'), JSON.stringify(data, null, 2))
 }
 
-// Migrate any profiles still using the old single `fonts`/`textStyleImageUrl` fields
 function migrateProfiles(profiles: Record<string, Record<string, unknown>>) {
   for (const client of Object.keys(profiles)) {
     const p = profiles[client]
-    if (p.fonts && !p.captionFont) {
-      p.captionFont = p.fonts
-      delete p.fonts
+    // old fonts field
+    if (p.fonts && !p.captionFont) { p.captionFont = p.fonts; delete p.fonts }
+    // old single-string image fields → arrays
+    if (p.textStyleImageUrl && !p.captionFontImageUrls) {
+      p.captionFontImageUrls = [p.textStyleImageUrl]; delete p.textStyleImageUrl
     }
-    if (p.textStyleImageUrl && !p.captionFontImageUrl) {
-      p.captionFontImageUrl = p.textStyleImageUrl
-      delete p.textStyleImageUrl
+    if (typeof p.captionFontImageUrl === 'string') {
+      p.captionFontImageUrls = p.captionFontImageUrl ? [p.captionFontImageUrl] : []
+      delete p.captionFontImageUrl
+    }
+    if (typeof p.overlayFontImageUrl === 'string') {
+      p.overlayFontImageUrls = p.overlayFontImageUrl ? [p.overlayFontImageUrl] : []
+      delete p.overlayFontImageUrl
     }
     if (!p.overlayFont) p.overlayFont = ''
-    if (!p.overlayFontImageUrl) p.overlayFontImageUrl = ''
+    if (!p.captionFontImageUrls) p.captionFontImageUrls = []
+    if (!p.overlayFontImageUrls) p.overlayFontImageUrls = []
     if (!p.logoUrl) p.logoUrl = ''
   }
   return profiles

@@ -98,8 +98,8 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
   const isEmpty =
     !profile ||
     (!profile.musicStyle && !profile.editingPace && !profile.colourCodes &&
-      !profile.captionFont && !profile.captionFontImageUrl &&
-      !profile.overlayFont && !profile.overlayFontImageUrl &&
+      !profile.captionFont && (!profile.captionFontImageUrls || profile.captionFontImageUrls.length === 0) &&
+      !profile.overlayFont && (!profile.overlayFontImageUrls || profile.overlayFontImageUrls.length === 0) &&
       !profile.logoUrl && !profile.generalNotes &&
       (!profile.dos || profile.dos.length === 0) &&
       (!profile.donts || profile.donts.length === 0))
@@ -124,17 +124,25 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
         {profile!.editingPace && <ProfileRow label="Pacing" value={profile!.editingPace} />}
         {profile!.colourCodes && <ProfileRow label="Colour Codes" value={profile!.colourCodes} />}
         {profile!.captionFont && <ProfileRow label="Caption Font" value={profile!.captionFont} />}
-        {profile!.captionFontImageUrl && (
+        {(profile!.captionFontImageUrls ?? []).length > 0 && (
           <div className="flex gap-3">
             <span className="w-24 flex-shrink-0 text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Caption Ref</span>
-            <img src={profile!.captionFontImageUrl} alt="Caption font reference" className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50" />
+            <div className="flex flex-wrap gap-2">
+              {profile!.captionFontImageUrls.map((url, i) => (
+                <img key={i} src={url} alt={`Caption ref ${i + 1}`} className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50" />
+              ))}
+            </div>
           </div>
         )}
         {profile!.overlayFont && <ProfileRow label="Overlay Font" value={profile!.overlayFont} />}
-        {profile!.overlayFontImageUrl && (
+        {(profile!.overlayFontImageUrls ?? []).length > 0 && (
           <div className="flex gap-3">
             <span className="w-24 flex-shrink-0 text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Overlay Ref</span>
-            <img src={profile!.overlayFontImageUrl} alt="Overlay font reference" className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50" />
+            <div className="flex flex-wrap gap-2">
+              {profile!.overlayFontImageUrls.map((url, i) => (
+                <img key={i} src={url} alt={`Overlay ref ${i + 1}`} className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50" />
+              ))}
+            </div>
           </div>
         )}
         {profile!.dos && profile!.dos.length > 0 && (
@@ -277,9 +285,12 @@ async function getLiveClientProfile(clientName: string): Promise<ClientProfile |
     if (!p) return null
     // Migrate old field names saved before the font schema change
     if (p.fonts && !p.captionFont) { p.captionFont = p.fonts; delete p.fonts }
-    if (p.textStyleImageUrl && !p.captionFontImageUrl) { p.captionFontImageUrl = p.textStyleImageUrl; delete p.textStyleImageUrl }
+    if (p.textStyleImageUrl && !p.captionFontImageUrls) { p.captionFontImageUrls = [p.textStyleImageUrl]; delete p.textStyleImageUrl }
+    if (typeof p.captionFontImageUrl === 'string') { p.captionFontImageUrls = p.captionFontImageUrl ? [p.captionFontImageUrl] : []; delete p.captionFontImageUrl }
+    if (typeof p.overlayFontImageUrl === 'string') { p.overlayFontImageUrls = p.overlayFontImageUrl ? [p.overlayFontImageUrl] : []; delete p.overlayFontImageUrl }
+    if (!p.captionFontImageUrls) p.captionFontImageUrls = []
+    if (!p.overlayFontImageUrls) p.overlayFontImageUrls = []
     if (!p.overlayFont) p.overlayFont = ''
-    if (!p.overlayFontImageUrl) p.overlayFontImageUrl = ''
     if (!p.logoUrl) p.logoUrl = ''
     return p as ClientProfile
   } catch {

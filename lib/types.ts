@@ -65,9 +65,9 @@ export interface ClientProfile {
   editingPace: string
   colourCodes: string
   captionFont: string
-  captionFontImageUrl: string
+  captionFontImageUrls: string[]
   overlayFont: string
-  overlayFontImageUrl: string
+  overlayFontImageUrls: string[]
   logoUrl: string
   dos: string[]
   donts: string[]
