@@ -179,7 +179,7 @@ export async function createVideoSubtasks(
   for (let i = 0; i < videos.length; i++) {
     const v = videos[i]
     const client = brief?.client ? `[${brief.client}] ` : ''
-    const name = `${client}${v.format || 'VIDEO'} ${i + 1}${v.angleObjective ? ` — ${v.angleObjective}` : ''}${v.duration ? ` (${v.duration})` : ''}`
+    const name = `${client}${v.angleObjective ? `${v.angleObjective} — ` : ''}${v.format || 'VIDEO'}${v.duration ? ` (${v.duration})` : ''}`
 
     // TYPE field per video format
     const videoCustomFields = [...customFields]
