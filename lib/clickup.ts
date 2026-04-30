@@ -179,7 +179,8 @@ export async function createVideoSubtasks(
   for (let i = 0; i < videos.length; i++) {
     const v = videos[i]
     const client = brief?.client ? `[${brief.client}] ` : ''
-    const label = v.hook || v.angleObjective || ''
+    const raw = v.hook || v.angleObjective || ''
+    const label = raw.length > 60 ? raw.slice(0, 57).trimEnd() + '…' : raw
     const name = `${client}${label ? `${label} — ` : ''}${v.format || 'VIDEO'}${v.duration ? ` (${v.duration})` : ''}`
 
     // TYPE field per video format
