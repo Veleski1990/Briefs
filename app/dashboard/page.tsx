@@ -209,7 +209,7 @@ export default async function DashboardPage({
           const doneCount = entries.length - active.length
 
           return (
-            <div key={client} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div key={client} className="rounded-2xl border border-gray-200 bg-white shadow-sm">
               {/* Client header */}
               <div className="flex items-center justify-between bg-[#4f1c1e]/5 border-b border-gray-200 px-5 py-3">
                 <h2 className="font-heading text-xl text-[#4f1c1e]">{client}</h2>
@@ -248,7 +248,7 @@ export default async function DashboardPage({
 
         {/* Completed clients — collapsed */}
         {doneClients.length > 0 && (
-          <details className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <details className="rounded-2xl border border-gray-200 bg-white shadow-sm">
             <summary className="flex cursor-pointer items-center justify-between px-5 py-4 select-none hover:bg-gray-50 transition-colors">
               <span className="text-sm font-semibold text-gray-500">Completed — {doneClients.length} client{doneClients.length !== 1 ? 's' : ''}</span>
               <span className="text-xs text-gray-400">▸ Show</span>
