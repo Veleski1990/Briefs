@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { CALENDAR_CLIENTS } from '@/lib/constants'
-import type { CalendarClient } from '@/lib/constants'
+const PAID_MEDIA_EXCLUDE = new Set(['FULFILMENT AUS', 'YTSS', 'FLO BUYERS AGENTS'])
 import { clientToSlug, slugToDisplay, STATUS_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
 import ScheduleGenerator from './ScheduleGenerator'
 import type { CalendarPost, PostFormat, PostCategory, PostStatus } from '@/lib/calendar-types'
@@ -134,7 +133,8 @@ const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.
 const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-widest text-gray-400'
 
 export default function CalendarManagePage() {
-  const [selectedClient, setSelectedClient] = useState<CalendarClient | null>(null)
+  const [calendarClients, setCalendarClients] = useState<string[]>([])
+  const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [posts, setPosts] = useState<CalendarPost[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -146,6 +146,13 @@ export default function CalendarManagePage() {
   const [showPreview, setShowPreview] = useState(false)
 
   const slug = selectedClient ? clientToSlug(selectedClient) : ''
+
+  useEffect(() => {
+    fetch('/api/clients')
+      .then(r => r.json())
+      .then((list: string[]) => setCalendarClients(list.filter(c => !PAID_MEDIA_EXCLUDE.has(c))))
+      .catch(() => {})
+  }, [])
 
   const loadToken = useCallback((s: string) => {
     fetch(`/api/calendar/token/${s}`)
@@ -259,7 +266,7 @@ export default function CalendarManagePage() {
         <div className="rounded-2xl bg-white border border-gray-200 px-5 py-4 shadow-sm">
           <label className={labelClass}>Client</label>
           <div className="flex flex-wrap gap-2 mt-1">
-            {CALENDAR_CLIENTS.map((c) => (
+            {calendarClients.map((c) => (
               <button
                 key={c}
                 type="button"
