@@ -46,6 +46,7 @@ export default function ClientsPage() {
   const [dontsInput, setDontsInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [newClientName, setNewClientName] = useState('')
   const [addingClient, setAddingClient] = useState(false)
   const [addError, setAddError] = useState('')
@@ -147,20 +148,32 @@ export default function ClientsPage() {
 
   const handleSave = useCallback(async () => {
     setSaving(true)
+    setSaveError('')
     const profile: ClientProfile = {
       ...form,
       dos: dosInput.split('\n').map((s) => s.trim()).filter(Boolean),
       donts: dontsInput.split('\n').map((s) => s.trim()).filter(Boolean),
     }
-    await fetch('/api/client-profiles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client: selected, profile }),
-    })
-    setProfiles((prev) => ({ ...prev, [selected]: profile }))
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    try {
+      const res = await fetch('/api/client-profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client: selected, profile }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setSaveError(err.error ?? `Save failed (${res.status})`)
+        setSaving(false)
+        return
+      }
+      setProfiles((prev) => ({ ...prev, [selected]: profile }))
+      setSaving(false)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Network error')
+      setSaving(false)
+    }
   }, [form, dosInput, dontsInput, selected])
 
   const inputClass =
@@ -450,12 +463,13 @@ export default function ClientsPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || !selected}
                 className="rounded-xl bg-brand-maroon px-6 py-2.5 text-sm font-semibold text-brand-accent hover:opacity-90 disabled:opacity-50 transition-all"
               >
-                {saving ? 'Saving…' : 'Save Style Guide'}
+                {saving ? 'Saving…' : `Save — ${selected}`}
               </button>
               {saved && <span className="text-sm text-green-600 font-medium">Saved ✓</span>}
+              {saveError && <span className="text-sm text-red-600 font-medium">{saveError}</span>}
             </div>
           </div>
         </div>
