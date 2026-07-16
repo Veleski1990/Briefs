@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRedis } from '@/lib/redis'
-import { buildUpdatedDescription, patchTaskBriefUrl } from '@/lib/clickup'
+import { addEditComment } from '@/lib/monday'
 import type { BriefFormData, StoredBrief } from '@/lib/types'
 
 export async function PUT(
@@ -26,8 +26,8 @@ export async function PUT(
   await redis.set(`brief:${taskId}`, JSON.stringify(stored), 'KEEPTTL')
   await redis.quit()
 
-  const description = buildUpdatedDescription(brief)
-  patchTaskBriefUrl(taskId, description, stored.briefUrl).catch(console.error)
+  // Post updated brief details as a comment on the Monday.com item
+  addEditComment(taskId, brief).catch(console.error)
 
   return NextResponse.json({ success: true })
 }

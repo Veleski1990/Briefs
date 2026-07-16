@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRedis } from '@/lib/redis'
-import { updateSubtaskStatus } from '@/lib/clickup'
+import { updateMondayStatus, MONDAY_STATUS_MAP } from '@/lib/monday'
 import type { BriefStatus, StoredBrief } from '@/lib/types'
 
-const CLICKUP_STATUS_MAP: Record<BriefStatus, string> = {
-  'not-started': 'in edit',
-  'in-edit': 'in edit',
-  'amendments': 'amendments',
-  'in-review': 'client review',
-  'approved': 'approved',
-  'scheduled': 'scheduled/sent',
+function getBoardId(pipeline?: string): string {
+  const map: Record<string, string | undefined> = {
+    'ORGANIC RETAINER':  process.env.MONDAY_ORGANIC_BOARD_ID,
+    'PAID ADS RETAINER': process.env.MONDAY_PAID_BOARD_ID,
+    'UGC PIPELINE':      process.env.MONDAY_UGC_BOARD_ID,
+    'PROPERTY VIDEO':    process.env.MONDAY_PROPERTY_BOARD_ID,
+  }
+  return (pipeline && map[pipeline]) || process.env.MONDAY_ORGANIC_BOARD_ID || ''
 }
 
 const VALID_STATUSES: BriefStatus[] = ['not-started', 'in-edit', 'amendments', 'in-review', 'approved', 'scheduled']
@@ -38,24 +39,20 @@ export async function POST(
 
   const stored: StoredBrief = JSON.parse(raw)
 
-  // Update this video's status
   if (!stored.videoStatuses) stored.videoStatuses = {}
   stored.videoStatuses[videoId] = status
 
-  // Save asset URL if provided
   if (assetUrl) {
     if (!stored.videoAssetUrls) stored.videoAssetUrls = {}
     stored.videoAssetUrls[videoId] = assetUrl
   }
 
-  // Record when a video is first approved
   if (status === 'approved') {
     if (!stored.videoApprovedAt) stored.videoApprovedAt = {}
     if (!stored.videoApprovedAt[videoId]) {
       stored.videoApprovedAt[videoId] = new Date().toISOString()
     }
   } else {
-    // Clear approvedAt if status moves away from approved
     if (stored.videoApprovedAt?.[videoId]) {
       delete stored.videoApprovedAt[videoId]
     }
@@ -64,13 +61,13 @@ export async function POST(
   await redis.set(`brief:${taskId}`, JSON.stringify(stored), 'KEEPTTL')
   await redis.quit()
 
-  // Update the ClickUp subtask status in background
+  // Sync status to Monday.com video item in background
   const subtaskId = stored.videoSubtaskIds?.[videoId]
-  if (subtaskId) {
-    updateSubtaskStatus(subtaskId, CLICKUP_STATUS_MAP[status]).catch(console.error)
+  const boardId = getBoardId(stored.brief.pipeline)
+  if (subtaskId && boardId) {
+    updateMondayStatus(subtaskId, boardId, MONDAY_STATUS_MAP[status]).catch(console.error)
   }
 
-  // Compute overall status to return to client
   const allStatuses = Object.values(stored.videoStatuses)
   const overallStatus: BriefStatus =
     allStatuses.every((s) => s === 'scheduled')

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClickUpTask, patchTaskBriefUrl, createVideoSubtasks } from '@/lib/clickup'
+import { createMondayItem, addBriefComment, createVideoItems } from '@/lib/monday'
 import { getRedis } from '@/lib/redis'
-import { PIPELINE_LIST_IDS, CLICKUP_LIST_ID } from '@/lib/constants'
 import type { SubmitBriefPayload, SubmitBriefResponse, StoredBrief, BriefStatus, ClientProfile } from '@/lib/types'
 
 const BRIEF_TTL_SECONDS = 60 * 60 * 24 * 180 // 180 days
@@ -41,9 +40,9 @@ async function notifyWebhook({
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.CLICKUP_API_KEY) {
+    if (!process.env.MONDAY_API_KEY) {
       return NextResponse.json<SubmitBriefResponse>(
-        { success: false, error: 'ClickUp API key not configured.' },
+        { success: false, error: 'Monday.com API key not configured.' },
         { status: 500 }
       )
     }
@@ -58,11 +57,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { taskId, taskUrl, description } = await createClickUpTask(brief)
+    const { itemId, itemUrl, description, boardId } = await createMondayItem(brief)
 
     const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://briefs-omega.vercel.app').trim()
-    const briefUrl = `${baseUrl}/brief/${taskId}`
-    const listId = (brief.pipeline && PIPELINE_LIST_IDS[brief.pipeline]) || CLICKUP_LIST_ID
+    const briefUrl = `${baseUrl}/brief/${itemId}`
 
     // Initial per-video statuses — all start as not-started
     const videoStatuses: Record<string, BriefStatus> = {}
@@ -81,17 +79,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create subtasks + patch brief URL in parallel, then store
+    // Create video items + add brief URL comment in parallel
     const [videoSubtaskIds] = await Promise.all([
-      createVideoSubtasks(taskId, listId, brief.videos, brief),
-      patchTaskBriefUrl(taskId, description, briefUrl),
-      notifyWebhook({ brief, briefUrl, taskUrl, videoCount: brief.videos.length }),
+      createVideoItems(boardId, brief.videos, brief),
+      addBriefComment(itemId, briefUrl, description),
+      notifyWebhook({ brief, briefUrl, taskUrl: itemUrl, videoCount: brief.videos.length }),
     ])
 
     const stored: StoredBrief = {
       brief,
-      taskId,
-      taskUrl,
+      taskId: itemId,
+      taskUrl: itemUrl,
       briefUrl,
       submittedAt: new Date().toISOString(),
       videoStatuses,
@@ -100,15 +98,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (redis) {
-      await redis.set(`brief:${taskId}`, JSON.stringify(stored), 'EX', BRIEF_TTL_SECONDS)
-      await redis.lpush('briefs:index', taskId)
+      await redis.set(`brief:${itemId}`, JSON.stringify(stored), 'EX', BRIEF_TTL_SECONDS)
+      await redis.lpush('briefs:index', itemId)
       await redis.quit()
     }
 
     return NextResponse.json<SubmitBriefResponse>({
       success: true,
-      taskId,
-      taskUrl,
+      taskId: itemId,
+      taskUrl: itemUrl,
       briefUrl,
     })
   } catch (err) {
