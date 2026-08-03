@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     isHidden: hidden.includes(name),
   }))
 
-  const all = [...builtins, ...customs]
+  const all = [...builtins, ...customs].sort((a, b) => a.name.localeCompare(b.name))
 
   if (includeAll) return NextResponse.json(all)
   return NextResponse.json(all.filter(c => !c.isHidden).map(c => c.name))

@@ -61,9 +61,13 @@ export default function ClientsPage() {
   const [renameError, setRenameError] = useState('')
   const [savingRename, setSavingRename] = useState(false)
 
+  const [filter, setFilter] = useState('')
   const activeClients = allClients.filter(c => !c.isHidden)
   const archivedClients = allClients.filter(c => c.isHidden)
   const selectedMeta = allClients.find(c => c.name === selected)
+  const filteredActive = filter
+    ? activeClients.filter(c => c.name.toLowerCase().includes(filter.toLowerCase()))
+    : activeClients
 
   const reloadClients = useCallback(async () => {
     const res = await fetch('/api/clients?all=1')
@@ -248,8 +252,15 @@ export default function ClientsPage() {
             </div>
 
             <div className="border-t border-brand-border pt-2">
-            <ul className="space-y-0.5">
-              {activeClients.map(({ name }) => {
+            <input
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Search…"
+              className="mb-2 w-full rounded-lg border border-brand-border bg-white px-2 py-1.5 text-xs text-brand-text placeholder-brand-muted focus:border-brand-maroon focus:outline-none"
+            />
+            <ul className="space-y-0.5 max-h-[420px] overflow-y-auto">
+              {filteredActive.map(({ name }) => {
                 const hasProfile = profiles[name] && (
                   profiles[name].musicStyle || profiles[name].generalNotes || profiles[name].dos.length > 0
                 )
