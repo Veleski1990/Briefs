@@ -106,7 +106,9 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
   const boardId = getBoardId(brief.pipeline)
   if (!boardId) throw new Error('MONDAY_ORGANIC_BOARD_ID not configured')
 
-  const itemName = `[${brief.client}] Brief — ${brief.shootDate}`
+  const rawTopic = brief.shootObjective || brief.whatWasFilmed || ''
+  const topic = rawTopic.length > 80 ? rawTopic.slice(0, 77).trimEnd() + '…' : rawTopic
+  const itemName = topic || `Shoot — ${brief.shootDate}`
   const description = briefDescription(brief)
 
   const dateCol = process.env.MONDAY_DATE_COL_ID
@@ -163,10 +165,9 @@ export async function createVideoItems(
     : ''
 
   for (const v of videos) {
-    const client = brief?.client ? `[${brief.client}] ` : ''
     const raw = v.hook || v.angleObjective || ''
     const label = raw.length > 60 ? raw.slice(0, 57).trimEnd() + '…' : raw
-    const itemName = `${client}${label ? `${label} — ` : ''}${v.format || 'VIDEO'}${v.duration ? ` (${v.duration})` : ''}`
+    const itemName = `${label ? `${label} — ` : ''}${v.format || 'VIDEO'}${v.duration ? ` (${v.duration})` : ''}`
 
     const colVals = buildColumnValues({
       ...(dateCol && v.deadline   ? { [dateCol]: { date: v.deadline } } : {}),
