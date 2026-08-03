@@ -48,8 +48,19 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
   useEffect(() => {
     params.then(({ clientSlug: slug }) => {
       setClientSlug(slug)
-      const t = new URLSearchParams(window.location.search).get('t')
+      const searchParams = new URLSearchParams(window.location.search)
+      const t = searchParams.get('t')
+      const monthParam = searchParams.get('month') // YYYY-MM
       if (!t) { setAuthorized(false); setLoading(false); return }
+
+      // If a month is specified in the URL, use it as the initial view
+      if (monthParam) {
+        const match = /^(\d{4})-(\d{2})$/.exec(monthParam)
+        if (match) {
+          setViewYear(Number(match[1]))
+          setViewMonth(Number(match[2]) - 1)
+        }
+      }
 
       fetch(`/api/calendar/token/${slug}?t=${encodeURIComponent(t)}`, { method: 'HEAD' })
         .then((r) => {
@@ -65,7 +76,8 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
                 init[p.id] = { status: p.status, note: p.clientNote || '', saving: false, done: false }
               })
               setApproval(init)
-              if (visible.length > 0) {
+              // Only fall back to the first post's month if no month was specified in the URL
+              if (!monthParam && visible.length > 0) {
                 const d = new Date(visible[0].scheduledDate + 'T00:00:00')
                 setViewYear(d.getFullYear())
                 setViewMonth(d.getMonth())

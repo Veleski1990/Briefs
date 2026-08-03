@@ -143,6 +143,10 @@ export default function CalendarManagePage() {
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [token, setToken] = useState<string | null>(null)
+  const [shareMonth, setShareMonth] = useState<string>(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
   const [showPreview, setShowPreview] = useState(false)
 
   const slug = selectedClient ? clientToSlug(selectedClient) : ''
@@ -225,7 +229,7 @@ export default function CalendarManagePage() {
   }
 
   const shareUrl = token
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/calendar/${slug}?t=${token}`
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/calendar/${slug}?t=${token}${shareMonth ? `&month=${shareMonth}` : ''}`
     : null
 
   const copyLink = () => {
@@ -282,6 +286,15 @@ export default function CalendarManagePage() {
           {selectedClient && (
             <div className="mt-4 border-t border-gray-100 pt-4 space-y-2">
               <p className={labelClass}>Client calendar link</p>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500">Opens on:</label>
+                <input
+                  type="month"
+                  value={shareMonth}
+                  onChange={(e) => setShareMonth(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 focus:outline-none focus:border-[#4f1c1e]"
+                />
+              </div>
               {shareUrl ? (
                 <div className="flex items-center gap-2">
                   <input
