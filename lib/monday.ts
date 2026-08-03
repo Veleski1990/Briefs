@@ -56,6 +56,33 @@ function buildColumnValues(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify(vals)
 }
 
+// Looks up a client's item ID in the Client Hub (TEAM) board by name
+export async function findClientHubItemId(clientName: string): Promise<string | null> {
+  const hubBoardId = process.env.MONDAY_CLIENT_HUB_BOARD_ID
+  if (!hubBoardId || !clientName) return null
+
+  try {
+    const data = await gql(`
+      query {
+        boards(ids: [${hubBoardId}]) {
+          items_page(limit: 200) {
+            items { id name }
+          }
+        }
+      }
+    `)
+    const items = data.boards?.[0]?.items_page?.items ?? []
+    const target = clientName.toLowerCase().trim()
+    const match = items.find((it: { id: string; name: string }) =>
+      it.name.toLowerCase().trim() === target
+    )
+    return match?.id ?? null
+  } catch (err) {
+    console.error('[monday] findClientHubItemId failed:', err)
+    return null
+  }
+}
+
 function briefDescription(brief: BriefFormData): string {
   return [
     brief.assignedEditor      && `**Editor:** ${brief.assignedEditor}`,
@@ -70,7 +97,7 @@ function briefDescription(brief: BriefFormData): string {
 }
 
 // Creates the parent brief item in Monday.com
-export async function createMondayItem(brief: BriefFormData): Promise<{
+export async function createMondayItem(brief: BriefFormData, clientHubItemId?: string | null): Promise<{
   itemId: string
   itemUrl: string
   description: string
@@ -86,7 +113,7 @@ export async function createMondayItem(brief: BriefFormData): Promise<{
   const clientCol = process.env.MONDAY_CLIENT_COL_ID
   const colVals = buildColumnValues({
     ...(dateCol && brief.shootDate ? { [dateCol]: { date: brief.shootDate } } : {}),
-    ...(clientCol && brief.client  ? { [clientCol]: brief.client } : {}),
+    ...(clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
   })
 
   const groupClause = process.env.MONDAY_TODO_GROUP_ID
@@ -125,7 +152,8 @@ export async function addBriefComment(itemId: string, briefUrl: string, descript
 export async function createVideoItems(
   boardId: string,
   videos: VideoRow[],
-  brief?: BriefFormData
+  brief?: BriefFormData,
+  clientHubItemId?: string | null
 ): Promise<Record<string, string>> {
   const itemIds: Record<string, string> = {}
   const dateCol   = process.env.MONDAY_DATE_COL_ID
@@ -142,7 +170,7 @@ export async function createVideoItems(
 
     const colVals = buildColumnValues({
       ...(dateCol && v.deadline   ? { [dateCol]: { date: v.deadline } } : {}),
-      ...(clientCol && brief?.client ? { [clientCol]: brief.client } : {}),
+      ...(clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
     })
 
     const descLines = [
