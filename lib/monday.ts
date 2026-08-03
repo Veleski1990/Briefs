@@ -3,7 +3,7 @@ import type { BriefFormData, VideoRow } from './types'
 const MONDAY_API = 'https://api.monday.com/v2'
 
 // Pipeline → Monday.com board ID mapping (set in Vercel env vars)
-function getBoardId(pipeline?: string): string {
+export function getBoardId(pipeline?: string): string {
   const map: Record<string, string | undefined> = {
     'ORGANIC RETAINER':  process.env.MONDAY_ORGANIC_BOARD_ID,
     'PAID ADS RETAINER': process.env.MONDAY_PAID_BOARD_ID,
@@ -56,6 +56,41 @@ function buildColumnValues(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify(vals)
 }
 
+// Converts YYYY-MM (e.g. "2026-08") to "August 2026" for group name matching
+function monthGroupName(yyyyMm: string): string {
+  const match = /^(\d{4})-(\d{2})/.exec(yyyyMm)
+  if (!match) return ''
+  const year = Number(match[1])
+  const monthIdx = Number(match[2]) - 1
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  if (monthIdx < 0 || monthIdx > 11) return ''
+  return `${months[monthIdx]} ${year}`
+}
+
+// Finds a group by name in the given board (case-insensitive, ignores extra whitespace)
+// Falls back to MONDAY_TODO_GROUP_ID if no matching month group exists yet
+export async function findMonthGroupId(boardId: string, publicationMonth: string): Promise<string> {
+  const fallback = process.env.MONDAY_TODO_GROUP_ID || ''
+  const target = monthGroupName(publicationMonth).toLowerCase().trim()
+  if (!target || !boardId) return fallback
+
+  try {
+    const data = await gql(`
+      query {
+        boards(ids: [${boardId}]) {
+          groups { id title }
+        }
+      }
+    `)
+    const groups: Array<{ id: string; title: string }> = data.boards?.[0]?.groups ?? []
+    const match = groups.find(g => g.title.toLowerCase().trim() === target)
+    return match?.id ?? fallback
+  } catch (err) {
+    console.error('[monday] findMonthGroupId failed:', err)
+    return fallback
+  }
+}
+
 // Looks up a client's item ID in the Client Hub (TEAM) board by name
 export async function findClientHubItemId(clientName: string): Promise<string | null> {
   const hubBoardId = process.env.MONDAY_CLIENT_HUB_BOARD_ID
@@ -97,7 +132,7 @@ function briefDescription(brief: BriefFormData): string {
 }
 
 // Creates the parent brief item in Monday.com
-export async function createMondayItem(brief: BriefFormData, clientHubItemId?: string | null): Promise<{
+export async function createMondayItem(brief: BriefFormData, clientHubItemId?: string | null, groupId?: string): Promise<{
   itemId: string
   itemUrl: string
   description: string
@@ -118,8 +153,9 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
     ...(clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
   })
 
-  const groupClause = process.env.MONDAY_TODO_GROUP_ID
-    ? `, group_id: ${JSON.stringify(process.env.MONDAY_TODO_GROUP_ID)}`
+  const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
+  const groupClause = targetGroupId
+    ? `, group_id: ${JSON.stringify(targetGroupId)}`
     : ''
 
   const data = await gql(`
@@ -155,13 +191,15 @@ export async function createVideoItems(
   boardId: string,
   videos: VideoRow[],
   brief?: BriefFormData,
-  clientHubItemId?: string | null
+  clientHubItemId?: string | null,
+  groupId?: string
 ): Promise<Record<string, string>> {
   const itemIds: Record<string, string> = {}
   const dateCol   = process.env.MONDAY_DATE_COL_ID
   const clientCol = process.env.MONDAY_CLIENT_COL_ID
-  const groupClause = process.env.MONDAY_TODO_GROUP_ID
-    ? `, group_id: ${JSON.stringify(process.env.MONDAY_TODO_GROUP_ID)}`
+  const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
+  const groupClause = targetGroupId
+    ? `, group_id: ${JSON.stringify(targetGroupId)}`
     : ''
 
   for (const v of videos) {

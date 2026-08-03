@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createMondayItem, addBriefComment, createVideoItems, findClientHubItemId } from '@/lib/monday'
+import { createMondayItem, addBriefComment, createVideoItems, findClientHubItemId, findMonthGroupId, getBoardId } from '@/lib/monday'
 import { getRedis } from '@/lib/redis'
 import type { SubmitBriefPayload, SubmitBriefResponse, StoredBrief, BriefStatus, ClientProfile } from '@/lib/types'
 
@@ -57,10 +57,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Look up the client's item in Client Hub (TEAM) so we can link the task to it
-    const clientHubItemId = await findClientHubItemId(brief.client)
+    // Fall back to shoot date's month if publicationMonth isn't set
+    const publicationMonth = brief.publicationMonth || (brief.shootDate ? brief.shootDate.slice(0, 7) : '')
+    const boardId = getBoardId(brief.pipeline)
 
-    const { itemId, itemUrl, description, boardId } = await createMondayItem(brief, clientHubItemId)
+    // Look up client + target month group in parallel
+    const [clientHubItemId, groupId] = await Promise.all([
+      findClientHubItemId(brief.client),
+      findMonthGroupId(boardId, publicationMonth),
+    ])
+
+    const { itemId, itemUrl, description } = await createMondayItem(brief, clientHubItemId, groupId)
 
     const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://briefs-omega.vercel.app').trim()
     const briefUrl = `${baseUrl}/brief/${itemId}`
@@ -84,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Create video items + add brief URL comment in parallel
     const [videoSubtaskIds] = await Promise.all([
-      createVideoItems(boardId, brief.videos, brief, clientHubItemId),
+      createVideoItems(boardId, brief.videos, brief, clientHubItemId, groupId),
       addBriefComment(itemId, briefUrl, description),
       notifyWebhook({ brief, briefUrl, taskUrl: itemUrl, videoCount: brief.videos.length }),
     ])

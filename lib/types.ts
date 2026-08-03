@@ -28,6 +28,7 @@ export interface BriefFormData {
   // Header — string to support dynamically added clients
   client: string
   shootDate: string
+  publicationMonth: string  // YYYY-MM — which month this content is FOR
   briefFilledBy: string
   dateSent: string
 

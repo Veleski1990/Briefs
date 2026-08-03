@@ -95,6 +95,7 @@ function emptyForm(): BriefFormData {
     pipeline: '',
     client: '',
     shootDate: '',
+    publicationMonth: '',
     briefFilledBy: '',
     dateSent: '',
     whatWasFilmed: '',
@@ -123,7 +124,18 @@ export default function BriefPage() {
   // Set date fields on client only to avoid SSR/client mismatch
   useEffect(() => {
     const t = today()
-    setForm((prev) => ({ ...prev, shootDate: t, dateSent: t }))
+    setForm((prev) => ({ ...prev, shootDate: t, dateSent: t, publicationMonth: t.slice(0, 7) }))
+  }, [])
+
+  // When shoot date changes and user hasn't manually set publication month, keep them in sync
+  useEffect(() => {
+    setForm(prev => {
+      if (!prev.shootDate) return prev
+      const shootMonth = prev.shootDate.slice(0, 7)
+      // Only auto-sync if publicationMonth is empty or matches an earlier auto-sync
+      if (!prev.publicationMonth) return { ...prev, publicationMonth: shootMonth }
+      return prev
+    })
   }, [])
 
   // Load client list (includes any custom clients added via /clients)
@@ -301,9 +313,22 @@ export default function BriefPage() {
                 id="shootDate"
                 label="Shoot Date"
                 value={form.shootDate}
-                onChange={(v) => setField('shootDate', v)}
+                onChange={(v) => {
+                  setField('shootDate', v)
+                  // Auto-update publication month to match shoot date's month
+                  // (user can still override afterward)
+                  if (v) setField('publicationMonth', v.slice(0, 7))
+                }}
                 type="date"
                 required
+              />
+              <TextField
+                id="publicationMonth"
+                label="Publication Month"
+                value={form.publicationMonth}
+                onChange={(v) => setField('publicationMonth', v)}
+                type="month"
+                placeholder="Which month is this content for?"
               />
               <TextField
                 id="dateSent"
