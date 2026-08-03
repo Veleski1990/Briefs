@@ -14,8 +14,8 @@ function getBoardId(pipeline?: string): string {
 }
 
 export const MONDAY_STATUS_MAP: Record<string, string> = {
-  'not-started': 'In Edit',
-  'in-edit':     'In Edit',
+  'not-started': 'Editing',
+  'in-edit':     'Editing',
   'amendments':  'Amendments',
   'in-review':   'In Review',
   'approved':    'Approved',
@@ -50,7 +50,7 @@ function buildColumnValues(overrides: Record<string, unknown> = {}): string {
   const statusCol  = process.env.MONDAY_STATUS_COL_ID
   const dateCol    = process.env.MONDAY_DATE_COL_ID
   const clientCol  = process.env.MONDAY_CLIENT_COL_ID
-  if (statusCol) vals[statusCol] = overrides[statusCol] ?? { label: 'In Edit' }
+  if (statusCol) vals[statusCol] = overrides[statusCol] ?? { label: 'Editing' }
   if (dateCol && overrides[dateCol]) vals[dateCol] = overrides[dateCol]
   if (clientCol && overrides[clientCol]) vals[clientCol] = overrides[clientCol]
   return JSON.stringify(vals)
