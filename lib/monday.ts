@@ -50,9 +50,11 @@ function buildColumnValues(overrides: Record<string, unknown> = {}): string {
   const statusCol  = process.env.MONDAY_STATUS_COL_ID
   const dateCol    = process.env.MONDAY_DATE_COL_ID
   const clientCol  = process.env.MONDAY_CLIENT_COL_ID
+  const ownerCol   = process.env.MONDAY_OWNER_COL_ID
   if (statusCol) vals[statusCol] = overrides[statusCol] ?? { label: 'Editing' }
   if (dateCol && overrides[dateCol]) vals[dateCol] = overrides[dateCol]
   if (clientCol && overrides[clientCol]) vals[clientCol] = overrides[clientCol]
+  if (ownerCol && overrides[ownerCol]) vals[ownerCol] = overrides[ownerCol]
   return JSON.stringify(vals)
 }
 
@@ -67,11 +69,13 @@ function monthGroupName(yyyyMm: string): string {
   return `${months[monthIdx]} ${year}`
 }
 
-// Finds a group by name in the given board (case-insensitive, ignores extra whitespace)
-// Falls back to MONDAY_TODO_GROUP_ID if no matching month group exists yet
+// Finds a group by name in the given board, auto-creating it if missing.
+// If publicationMonth is invalid, falls back to MONDAY_TODO_GROUP_ID (legacy)
+// or empty string (let Monday drop it in the first group by default).
 export async function findMonthGroupId(boardId: string, publicationMonth: string): Promise<string> {
   const fallback = process.env.MONDAY_TODO_GROUP_ID || ''
-  const target = monthGroupName(publicationMonth).toLowerCase().trim()
+  const target = monthGroupName(publicationMonth)
+  const targetLower = target.toLowerCase().trim()
   if (!target || !boardId) return fallback
 
   try {
@@ -83,11 +87,41 @@ export async function findMonthGroupId(boardId: string, publicationMonth: string
       }
     `)
     const groups: Array<{ id: string; title: string }> = data.boards?.[0]?.groups ?? []
-    const match = groups.find(g => g.title.toLowerCase().trim() === target)
-    return match?.id ?? fallback
+    const match = groups.find(g => g.title.toLowerCase().trim() === targetLower)
+    if (match) return match.id
+
+    // Auto-create the month group at the top of the board
+    const created = await gql(`
+      mutation {
+        create_group(
+          board_id: ${boardId},
+          group_name: ${JSON.stringify(target)}
+        ) { id }
+      }
+    `)
+    return created.create_group?.id ?? fallback
   } catch (err) {
     console.error('[monday] findMonthGroupId failed:', err)
     return fallback
+  }
+}
+
+// Looks up a Monday.com workspace user by name (case-insensitive)
+export async function findMondayUserId(name: string): Promise<number | null> {
+  if (!name) return null
+  try {
+    const data = await gql(`query { users(limit: 200) { id name email } }`)
+    const users: Array<{ id: string; name: string; email: string }> = data.users ?? []
+    const target = name.toLowerCase().trim()
+    const match = users.find(u =>
+      u.name.toLowerCase().trim() === target ||
+      u.name.toLowerCase().split(' ')[0] === target ||
+      u.email?.toLowerCase().split('@')[0] === target
+    )
+    return match ? Number(match.id) : null
+  } catch (err) {
+    console.error('[monday] findMondayUserId failed:', err)
+    return null
   }
 }
 
@@ -132,7 +166,7 @@ function briefDescription(brief: BriefFormData): string {
 }
 
 // Creates the parent brief item in Monday.com
-export async function createMondayItem(brief: BriefFormData, clientHubItemId?: string | null, groupId?: string): Promise<{
+export async function createMondayItem(brief: BriefFormData, clientHubItemId?: string | null, groupId?: string, ownerUserId?: number | null): Promise<{
   itemId: string
   itemUrl: string
   description: string
@@ -141,16 +175,20 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
   const boardId = getBoardId(brief.pipeline)
   if (!boardId) throw new Error('MONDAY_ORGANIC_BOARD_ID not configured')
 
-  const rawTopic = brief.shootObjective || brief.whatWasFilmed || ''
+  // Prefer the first video's hook as the task name (falls back to shoot objective)
+  const firstHook = brief.videos?.[0]?.hook?.trim()
+  const rawTopic = firstHook || brief.shootObjective || brief.whatWasFilmed || ''
   const topic = rawTopic.length > 80 ? rawTopic.slice(0, 77).trimEnd() + '…' : rawTopic
   const itemName = topic || `Shoot — ${brief.shootDate}`
   const description = briefDescription(brief)
 
   const dateCol = process.env.MONDAY_DATE_COL_ID
   const clientCol = process.env.MONDAY_CLIENT_COL_ID
+  const ownerCol = process.env.MONDAY_OWNER_COL_ID
   const colVals = buildColumnValues({
     ...(dateCol && brief.shootDate ? { [dateCol]: { date: brief.shootDate } } : {}),
     ...(clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
+    ...(ownerCol && ownerUserId ? { [ownerCol]: { personsAndTeams: [{ id: ownerUserId, kind: 'person' }] } } : {}),
   })
 
   const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
@@ -192,11 +230,13 @@ export async function createVideoItems(
   videos: VideoRow[],
   brief?: BriefFormData,
   clientHubItemId?: string | null,
-  groupId?: string
+  groupId?: string,
+  ownerUserId?: number | null
 ): Promise<Record<string, string>> {
   const itemIds: Record<string, string> = {}
   const dateCol   = process.env.MONDAY_DATE_COL_ID
   const clientCol = process.env.MONDAY_CLIENT_COL_ID
+  const ownerCol  = process.env.MONDAY_OWNER_COL_ID
   const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
   const groupClause = targetGroupId
     ? `, group_id: ${JSON.stringify(targetGroupId)}`
@@ -210,14 +250,24 @@ export async function createVideoItems(
     const colVals = buildColumnValues({
       ...(dateCol && v.deadline   ? { [dateCol]: { date: v.deadline } } : {}),
       ...(clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
+      ...(ownerCol && ownerUserId ? { [ownerCol]: { personsAndTeams: [{ id: ownerUserId, kind: 'person' }] } } : {}),
     })
+
+    // New structured contentLinks take priority; fall back to legacy aRoll/bRoll strings
+    const contentLines = v.contentLinks && v.contentLinks.length > 0
+      ? v.contentLinks.filter(cl => cl.url?.trim()).map((cl, i) =>
+          `**Content Link${i > 0 ? ` ${i+1}` : ''}:** ${cl.url}${cl.notes ? ` — ${cl.notes}` : ''}`
+        )
+      : [
+          ...(v.aRollLinks ? v.aRollLinks.split('\n').filter(Boolean).map((l, i) => `**Content Link${i > 0 ? ` ${i+1}` : ''}:** ${l}`) : []),
+          ...(v.bRollLinks ? v.bRollLinks.split('\n').filter(Boolean).map((l, i) => `**Content Link${i > 0 ? ` ${i+1}` : ''} (B-Roll):** ${l}`) : []),
+        ]
 
     const descLines = [
       brief?.shootDate           && `**Shoot Date:** ${brief.shootDate}`,
       brief?.assignedEditor      && `**Editor:** ${brief.assignedEditor}`,
-      v.hook                     && `**Hook (first 3s):** ${v.hook}`,
-      ...(v.aRollLinks ? v.aRollLinks.split('\n').filter(Boolean).map((l, i) => `**A-Roll${i > 0 ? ` ${i+1}` : ''}:** ${l}`) : []),
-      ...(v.bRollLinks ? v.bRollLinks.split('\n').filter(Boolean).map((l, i) => `**B-Roll${i > 0 ? ` ${i+1}` : ''}:** ${l}`) : []),
+      v.hook                     && `**First 10 seconds:** ${v.hook}`,
+      ...contentLines,
       v.scriptLink               && `**Script:** ${v.scriptLink}`,
       v.musicLink                && `**Music:** ${v.musicLink}`,
       v.textOverlays             && `**Text Overlays:** ${v.textOverlays}`,

@@ -10,45 +10,37 @@ interface VideoRowCardProps {
   video: VideoRow
   index: number
   onChange: (id: string, field: keyof VideoRow, value: string) => void
+  onChangeContentLinks: (id: string, links: Array<{ url: string; notes?: string }>) => void
   onRemove: (id: string) => void
   canRemove: boolean
 }
 
-// Formats where Hook + A-Roll/B-Roll are relevant
+// Formats where Hook + content links are relevant
 const VIDEO_ONLY_FORMATS = new Set(['REEL', 'SHORT-FORM', 'VSL', 'STORY'])
 
-function FootageLinks({
+function ContentLinks({
   label,
-  value,
+  links,
   onChange,
   videoId,
-  fieldKey,
 }: {
   label: string
-  value: string
-  onChange: (val: string) => void
+  links: Array<{ url: string; notes?: string }>
+  onChange: (next: Array<{ url: string; notes?: string }>) => void
   videoId: string
-  fieldKey: string
 }) {
-  const [links, setLinks] = useState<string[]>(() => {
-    const parsed = (value || '').split('\n').map((l) => l.trim()).filter(Boolean)
-    return parsed.length > 0 ? parsed : ['']
-  })
+  const rows = links.length > 0 ? links : [{ url: '', notes: '' }]
 
-  const updateLink = (i: number, val: string) => {
-    const next = [...links]
-    next[i] = val
-    setLinks(next)
-    onChange(next.filter(Boolean).join('\n'))
+  const updateRow = (i: number, patch: Partial<{ url: string; notes: string }>) => {
+    const next = rows.map((r, idx) => idx === i ? { ...r, ...patch } : r)
+    onChange(next.filter(r => r.url.trim() || r.notes?.trim()))
   }
 
-  const addLink = () => setLinks((prev) => [...prev, ''])
+  const addRow = () => onChange([...rows, { url: '', notes: '' }])
 
-  const removeLink = (i: number) => {
-    const next = links.filter((_, idx) => idx !== i)
-    const safe = next.length > 0 ? next : ['']
-    setLinks(safe)
-    onChange(safe.filter(Boolean).join('\n'))
+  const removeRow = (i: number) => {
+    const next = rows.filter((_, idx) => idx !== i)
+    onChange(next)
   }
 
   return (
@@ -56,33 +48,43 @@ function FootageLinks({
       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-brand-muted">
         {label}
       </label>
-      <div className="space-y-1.5">
-        {links.map((link, i) => (
-          <div key={`${videoId}-${fieldKey}-${i}`} className="flex items-center gap-1.5">
+      <p className="mb-2 text-xs text-brand-muted">Paste a link and add any notes about it (e.g. what the footage covers).</p>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={`${videoId}-content-${i}`} className="rounded-lg border border-brand-border bg-white p-2 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="url"
+                value={row.url}
+                onChange={(e) => updateRow(i, { url: e.target.value })}
+                placeholder="Drive / Frame.io URL"
+                className="flex-1 rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text placeholder-brand-taupe focus:border-brand-maroon focus:outline-none focus:ring-1 focus:ring-brand-maroon transition-colors"
+              />
+              {rows.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeRow(i)}
+                  className="flex-shrink-0 text-xs text-brand-muted hover:text-red-500 transition-colors px-1"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <input
-              type="url"
-              value={link}
-              onChange={(e) => updateLink(i, e.target.value)}
-              placeholder="Drive / Frame.io URL"
-              className="flex-1 rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text placeholder-brand-taupe focus:border-brand-maroon focus:outline-none focus:ring-1 focus:ring-brand-maroon transition-colors"
+              type="text"
+              value={row.notes ?? ''}
+              onChange={(e) => updateRow(i, { notes: e.target.value })}
+              placeholder="Notes (optional) — e.g. hero shot of kitchen, main hook footage…"
+              className="w-full rounded-lg border border-brand-border bg-brand-surface-2 px-3 py-1.5 text-xs text-brand-text placeholder-brand-taupe focus:border-brand-maroon focus:outline-none transition-colors"
             />
-            {links.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removeLink(i)}
-                className="flex-shrink-0 text-xs text-brand-muted hover:text-red-400 transition-colors px-1"
-              >
-                ✕
-              </button>
-            )}
           </div>
         ))}
         <button
           type="button"
-          onClick={addLink}
+          onClick={addRow}
           className="text-xs text-brand-muted hover:text-brand-maroon transition-colors"
         >
-          + Add link
+          + Add another link
         </button>
       </div>
     </div>
@@ -93,6 +95,7 @@ export default function VideoRowCard({
   video,
   index,
   onChange,
+  onChangeContentLinks,
   onRemove,
   canRemove,
 }: VideoRowCardProps) {
@@ -156,50 +159,28 @@ export default function VideoRowCard({
         />
       </div>
 
-      {/* Video formats only: Hook + Footage */}
+      {/* Video formats only: Hook */}
       {isVideoFormat && (
-        <>
-          <div className="mt-4">
-            <TextField
-              id={`hook-${video.id}`}
-              label="Hook (First 3 Seconds)"
-              value={video.hook}
-              onChange={update('hook')}
-              placeholder="Describe exactly what should happen in the opening seconds"
-            />
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FootageLinks
-              label="A-Roll Footage"
-              value={video.aRollLinks || ''}
-              onChange={update('aRollLinks')}
-              videoId={video.id}
-              fieldKey="aroll"
-            />
-            <FootageLinks
-              label="B-Roll Footage"
-              value={video.bRollLinks || ''}
-              onChange={update('bRollLinks')}
-              videoId={video.id}
-              fieldKey="broll"
-            />
-          </div>
-        </>
-      )}
-
-      {/* Static/Carousel: just a single footage field */}
-      {!isVideoFormat && (
         <div className="mt-4">
-          <FootageLinks
-            label="Footage / Assets"
-            value={video.aRollLinks || ''}
-            onChange={update('aRollLinks')}
-            videoId={video.id}
-            fieldKey="aroll"
+          <TextField
+            id={`hook-${video.id}`}
+            label="What should the video say in the first 10 seconds"
+            value={video.hook}
+            onChange={update('hook')}
+            placeholder="Describe exactly what should happen or be said in the opening — this hooks the viewer"
           />
         </div>
       )}
+
+      {/* Content links — unified for all formats */}
+      <div className="mt-4">
+        <ContentLinks
+          label={isVideoFormat ? 'Content Link' : 'Content / Assets'}
+          links={video.contentLinks ?? []}
+          onChange={(next) => onChangeContentLinks(video.id, next)}
+          videoId={video.id}
+        />
+      </div>
 
       {/* Optional fields toggle */}
       <div className="mt-4">

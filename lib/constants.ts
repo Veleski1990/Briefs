@@ -62,12 +62,11 @@ export const PIPELINE_LIST_IDS: Record<string, string> = {
   'PROPERTY VIDEO': '901614166192',
 }
 
-export const PIPELINES = ['ORGANIC RETAINER', 'PAID ADS RETAINER', 'UGC PIPELINE', 'PROPERTY VIDEO'] as const
+export const PIPELINES = ['ORGANIC RETAINER', 'PAID ADS RETAINER', 'PROPERTY VIDEO'] as const
 
 export const PIPELINE_DESCRIPTIONS: Record<string, string> = {
   'ORGANIC RETAINER': 'Organic social content — Reels, Carousels, Stories for ongoing retainer clients.',
   'PAID ADS RETAINER': 'Paid advertising content — VSLs, ad creatives, and performance-focused edits.',
-  'UGC PIPELINE': 'User-generated content — raw, authentic creator-style videos for brands.',
   'PROPERTY VIDEO': 'Property walkthrough and real estate video content.',
 }
 

@@ -82,6 +82,7 @@ function emptyVideo(id: string): VideoRow {
     hook: '',
     aRollLinks: '',
     bRollLinks: '',
+    contentLinks: [],
     scriptLink: '',
     musicLink: '',
     textOverlays: '',
@@ -186,6 +187,15 @@ export default function BriefPage() {
     }))
   }
 
+  const updateVideoContentLinks = (id: string, links: Array<{ url: string; notes?: string }>) => {
+    setForm((prev) => ({
+      ...prev,
+      videos: prev.videos.map((v) =>
+        v.id === id ? { ...v, contentLinks: links } : v
+      ),
+    }))
+  }
+
   // --- submit ---
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -266,34 +276,18 @@ export default function BriefPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* ── PIPELINE SELECTOR ── */}
-          <section className="rounded-xl bg-brand-surface p-6 shadow-sm border border-brand-border">
-            <SectionHeading title="Select Pipeline" description="Where should this brief be sent?" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {PIPELINES.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setField('pipeline', p)}
-                  className={`rounded-lg border p-4 text-left transition-all ${
-                    form.pipeline === p
-                      ? 'border-brand-maroon bg-brand-maroon text-brand-offwhite'
-                      : 'border-brand-border bg-brand-surface-2 text-brand-text hover:border-brand-maroon'
-                  }`}
-                >
-                  <p className="text-sm font-semibold">{p}</p>
-                  <p className={`mt-1 text-xs ${form.pipeline === p ? 'text-brand-offwhite opacity-80' : 'text-brand-muted'}`}>
-                    {PIPELINE_DESCRIPTIONS[p]}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* ── SECTION 1: Header ── */}
+          {/* ── SECTION 1: Brief Details (incl. pipeline + shoot context) ── */}
           <section className="rounded-xl bg-brand-surface p-6 shadow-sm border border-brand-border">
             <SectionHeading title="Brief Details" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <SelectField
+                id="pipeline"
+                label="Pipeline"
+                value={form.pipeline}
+                options={PIPELINES}
+                onChange={(v) => setField('pipeline', v as BriefFormData['pipeline'])}
+                required
+              />
               <SelectField
                 id="client"
                 label="Client"
@@ -352,21 +346,8 @@ export default function BriefPage() {
                 placeholder="e.g. Mo, Sarah…"
               />
             </div>
-            {form.client && (
-              <ClientStylePanel
-                client={form.client}
-                profile={(clientProfiles[form.client] as Parameters<typeof ClientStylePanel>[0]['profile']) ?? null}
-              />
-            )}
-          </section>
 
-          {/* ── SECTION 2: Shoot Context ── */}
-          <section className="rounded-xl bg-brand-surface p-6 shadow-sm border border-brand-border">
-            <SectionHeading
-              title="Shoot Context"
-              description="Give the editor the full picture of what was captured and why."
-            />
-            <div className="space-y-4">
+            <div className="mt-4 space-y-4">
               <TextField
                 id="clientBriefLink"
                 label="Client Brief Link"
@@ -385,6 +366,13 @@ export default function BriefPage() {
                 rows={4}
               />
             </div>
+
+            {form.client && (
+              <ClientStylePanel
+                client={form.client}
+                profile={(clientProfiles[form.client] as Parameters<typeof ClientStylePanel>[0]['profile']) ?? null}
+              />
+            )}
           </section>
 
           {/* ── SECTION 4: Videos ── */}
@@ -400,6 +388,7 @@ export default function BriefPage() {
                   video={video}
                   index={i}
                   onChange={updateVideo}
+                  onChangeContentLinks={updateVideoContentLinks}
                   onRemove={removeVideo}
                   canRemove={form.videos.length > 1}
                 />

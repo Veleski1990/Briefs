@@ -19,6 +19,8 @@ export interface VideoRow {
   textOverlays: string
   specialNotes: string
   deadline: string
+  // New structured field — replaces aRollLinks/bRollLinks in new briefs
+  contentLinks?: Array<{ url: string; notes?: string }>
 }
 
 export interface BriefFormData {

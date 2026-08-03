@@ -245,11 +245,27 @@ function VideoCard({
       <div className="divide-y divide-gray-100">
         <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2">
           <Field label="Angle / Objective" value={video.angleObjective} />
-          <Field label="Hook (first 3s)" value={video.hook} />
+          <Field label="First 10 seconds" value={video.hook} />
         </div>
         <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2 bg-gray-50">
-          <MultiLinkField label="A-Roll Footage" value={video.aRollLinks || (video as VideoRow & { footageLink?: string }).footageLink || ''} />
-          <MultiLinkField label="B-Roll Footage" value={video.bRollLinks || ''} />
+          {video.contentLinks && video.contentLinks.length > 0 ? (
+            <div className="sm:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">Content Links</p>
+              <ul className="space-y-1.5">
+                {video.contentLinks.filter(cl => cl.url).map((cl, i) => (
+                  <li key={i} className="text-sm">
+                    <a href={cl.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{cl.url}</a>
+                    {cl.notes && <span className="text-gray-600 ml-2">— {cl.notes}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <>
+              <MultiLinkField label="A-Roll Footage" value={video.aRollLinks || (video as VideoRow & { footageLink?: string }).footageLink || ''} />
+              <MultiLinkField label="B-Roll Footage" value={video.bRollLinks || ''} />
+            </>
+          )}
           <LinkField label="Script" value={video.scriptLink} />
           <LinkField label="Music" value={video.musicLink} />
         </div>
