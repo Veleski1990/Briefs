@@ -1,9 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CLIENTS } from '@/lib/constants'
 
-const BUILTIN = new Set<string>(CLIENTS)
+type ClientMeta = {
+  name: string
+  isCustom: boolean
+  isHidden: boolean
+  originalName?: string
+}
 
 interface ClientProfile {
   musicStyle: string
@@ -38,7 +42,8 @@ function emptyProfile(): ClientProfile {
 }
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState<string[]>([])
+  const [allClients, setAllClients] = useState<ClientMeta[]>([])
+  const [showArchived, setShowArchived] = useState(false)
   const [profiles, setProfiles] = useState<AllProfiles>({})
   const [selected, setSelected] = useState<string>('')
   const [form, setForm] = useState<ClientProfile>(emptyProfile())
@@ -56,20 +61,28 @@ export default function ClientsPage() {
   const [renameError, setRenameError] = useState('')
   const [savingRename, setSavingRename] = useState(false)
 
+  const activeClients = allClients.filter(c => !c.isHidden)
+  const archivedClients = allClients.filter(c => c.isHidden)
+  const selectedMeta = allClients.find(c => c.name === selected)
+
+  const reloadClients = useCallback(async () => {
+    const res = await fetch('/api/clients?all=1')
+    const list: ClientMeta[] = await res.json()
+    setAllClients(list)
+    return list
+  }, [])
 
   useEffect(() => {
-    fetch('/api/clients')
-      .then((r) => r.json())
-      .then((list: string[]) => {
-        setClients(list)
-        const params = new URLSearchParams(window.location.search)
-        const edit = params.get('edit')
-        setSelected(edit && list.includes(edit) ? edit : list[0] ?? '')
-        if (params.get('new') === '1') {
-          setTimeout(() => newClientInputRef.current?.focus(), 100)
-        }
-      })
-  }, [])
+    reloadClients().then((list) => {
+      const params = new URLSearchParams(window.location.search)
+      const edit = params.get('edit')
+      const active = list.filter(c => !c.isHidden).map(c => c.name)
+      setSelected(edit && active.includes(edit) ? edit : active[0] ?? '')
+      if (params.get('new') === '1') {
+        setTimeout(() => newClientInputRef.current?.focus(), 100)
+      }
+    })
+  }, [reloadClients])
 
   useEffect(() => {
     fetch('/api/client-profiles')
@@ -115,7 +128,7 @@ export default function ClientsPage() {
       setAddingClient(false)
       return
     }
-    setClients(data.clients)
+    await reloadClients()
     setSelected(name.trim().toUpperCase())
     setNewClientName('')
     setAddingClient(false)
@@ -133,9 +146,9 @@ export default function ClientsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ oldName: selected, newName }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
     if (!res.ok) { setRenameError(data.error ?? 'Failed'); setSavingRename(false); return }
-    setClients(data.clients)
+    await reloadClients()
     setSelected(newName)
     setProfiles(prev => {
       const next = { ...prev }
@@ -144,6 +157,20 @@ export default function ClientsPage() {
     })
     setRenamingClient(false)
     setSavingRename(false)
+  }
+
+  const toggleArchive = async (name: string, hidden: boolean) => {
+    const res = await fetch('/api/clients', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, hidden }),
+    })
+    if (!res.ok) return
+    const list = await reloadClients()
+    if (hidden && selected === name) {
+      const firstActive = list.find(c => !c.isHidden)
+      setSelected(firstActive?.name ?? '')
+    }
   }
 
   const handleSave = useCallback(async () => {
@@ -222,22 +249,22 @@ export default function ClientsPage() {
 
             <div className="border-t border-brand-border pt-2">
             <ul className="space-y-0.5">
-              {clients.map((c) => {
-                const hasProfile = profiles[c] && (
-                  profiles[c].musicStyle || profiles[c].generalNotes || profiles[c].dos.length > 0
+              {activeClients.map(({ name }) => {
+                const hasProfile = profiles[name] && (
+                  profiles[name].musicStyle || profiles[name].generalNotes || profiles[name].dos.length > 0
                 )
                 return (
-                  <li key={c}>
+                  <li key={name}>
                     <button
                       type="button"
-                      onClick={() => setSelected(c)}
+                      onClick={() => setSelected(name)}
                       className={`w-full rounded-lg px-2 py-2 text-left text-xs font-medium transition-all ${
-                        selected === c
+                        selected === name
                           ? 'bg-brand-maroon text-brand-accent'
                           : 'text-brand-text hover:bg-brand-surface-2'
                       }`}
                     >
-                      <span>{c}</span>
+                      <span>{name}</span>
                       {hasProfile && <span className="ml-1 text-green-500">•</span>}
                     </button>
                   </li>
@@ -245,6 +272,45 @@ export default function ClientsPage() {
               })}
             </ul>
             </div>
+
+            {archivedClients.length > 0 && (
+              <div className="mt-3 border-t border-brand-border pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowArchived(v => !v)}
+                  className="w-full text-left px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-brand-muted hover:text-brand-text"
+                >
+                  {showArchived ? '▾' : '▸'} Archived · {archivedClients.length}
+                </button>
+                {showArchived && (
+                  <ul className="mt-1 space-y-0.5">
+                    {archivedClients.map(({ name }) => (
+                      <li key={name} className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => { setSelected(name); setShowArchived(true) }}
+                          className={`flex-1 rounded-lg px-2 py-1.5 text-left text-xs font-medium transition-all ${
+                            selected === name
+                              ? 'bg-brand-maroon text-brand-accent'
+                              : 'text-brand-muted hover:bg-brand-surface-2 line-through'
+                          }`}
+                        >
+                          {name}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleArchive(name, false)}
+                          title="Restore"
+                          className="rounded px-1.5 py-0.5 text-[10px] text-brand-muted hover:text-brand-maroon"
+                        >
+                          ↺
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Profile editor */}
@@ -269,10 +335,27 @@ export default function ClientsPage() {
               ) : (
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-semibold text-brand-dark">{selected}</h2>
-                  {!BUILTIN.has(selected) && (
-                    <button onClick={startRename} className="text-xs text-brand-muted hover:text-brand-maroon underline">
-                      Rename
-                    </button>
+                  {selected && (
+                    <>
+                      <button onClick={startRename} className="text-xs text-brand-muted hover:text-brand-maroon underline">
+                        Rename
+                      </button>
+                      {selectedMeta?.isHidden ? (
+                        <button
+                          onClick={() => toggleArchive(selected, false)}
+                          className="text-xs text-brand-muted hover:text-green-600 underline"
+                        >
+                          Restore
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => toggleArchive(selected, true)}
+                          className="text-xs text-brand-muted hover:text-red-600 underline"
+                        >
+                          Archive
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
