@@ -1,5 +1,10 @@
 'use client'
 
+interface BrandingGuideline {
+  label: string
+  url: string
+}
+
 interface ClientProfile {
   musicStyle: string
   editingPace: string
@@ -8,7 +13,7 @@ interface ClientProfile {
   captionFontImageUrls: string[]
   overlayFont: string
   overlayFontImageUrls: string[]
-  logoUrl: string
+  brandingGuidelines: BrandingGuideline[]
   dos: string[]
   donts: string[]
   generalNotes: string
@@ -57,7 +62,7 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
       (!profile.captionFontImageUrls || profile.captionFontImageUrls.length === 0) &&
       !profile.overlayFont &&
       (!profile.overlayFontImageUrls || profile.overlayFontImageUrls.length === 0) &&
-      !profile.logoUrl &&
+      (!profile.brandingGuidelines || profile.brandingGuidelines.length === 0) &&
       !profile.generalNotes &&
       profile.dos.length === 0 &&
       profile.donts.length === 0)
@@ -92,10 +97,18 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
         </p>
       ) : (
         <div className="space-y-2">
-          {profile.logoUrl && (
-            <div className="flex gap-3 items-start">
-              <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Logo</span>
-              <img src={profile.logoUrl} alt="Brand logo" className="max-h-12 max-w-[120px] object-contain bg-white rounded border border-brand-border p-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          {(profile.brandingGuidelines?.length ?? 0) > 0 && (
+            <div className="flex gap-3">
+              <span className="w-32 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-brand-muted">Branding</span>
+              <ul className="space-y-0.5">
+                {profile.brandingGuidelines.filter(g => g.url).map((g, i) => (
+                  <li key={i} className="text-sm">
+                    <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-brand-maroon hover:underline break-all">
+                      {g.label || g.url}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           <Row label="Music" value={profile.musicStyle} />

@@ -100,7 +100,8 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
     (!profile.musicStyle && !profile.editingPace && !profile.colourCodes &&
       !profile.captionFont && (!profile.captionFontImageUrls || profile.captionFontImageUrls.length === 0) &&
       !profile.overlayFont && (!profile.overlayFontImageUrls || profile.overlayFontImageUrls.length === 0) &&
-      !profile.logoUrl && !profile.generalNotes &&
+      (!profile.brandingGuidelines || profile.brandingGuidelines.length === 0) &&
+      !profile.generalNotes &&
       (!profile.dos || profile.dos.length === 0) &&
       (!profile.donts || profile.donts.length === 0))
 
@@ -114,10 +115,18 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
         </h2>
       </div>
       <div className="px-5 py-4 space-y-2.5">
-        {profile!.logoUrl && (
-          <div className="flex gap-3 items-start">
-            <span className="w-24 flex-shrink-0 text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Logo</span>
-            <img src={profile!.logoUrl} alt="Brand logo" className="max-h-16 max-w-[140px] rounded-lg border border-gray-200 object-contain bg-gray-50 p-1" />
+        {(profile!.brandingGuidelines?.length ?? 0) > 0 && (
+          <div className="flex gap-3">
+            <span className="w-24 flex-shrink-0 text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-0.5">Branding</span>
+            <ul className="space-y-0.5">
+              {profile!.brandingGuidelines.filter(g => g.url).map((g, i) => (
+                <li key={i} className="text-sm">
+                  <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-[#4f1c1e] underline underline-offset-2 hover:opacity-70 break-all">
+                    {g.label || g.url}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         {profile!.musicStyle && <ProfileRow label="Music" value={profile!.musicStyle} />}
@@ -307,7 +316,8 @@ async function getLiveClientProfile(clientName: string): Promise<ClientProfile |
     if (!p.captionFontImageUrls) p.captionFontImageUrls = []
     if (!p.overlayFontImageUrls) p.overlayFontImageUrls = []
     if (!p.overlayFont) p.overlayFont = ''
-    if (!p.logoUrl) p.logoUrl = ''
+    if ('logoUrl' in p) delete p.logoUrl
+    if (!Array.isArray(p.brandingGuidelines)) p.brandingGuidelines = []
     return p as ClientProfile
   } catch {
     return null

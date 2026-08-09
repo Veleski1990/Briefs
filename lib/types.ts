@@ -63,6 +63,11 @@ export interface BriefFormData {
 
 export type BriefStatus = 'not-started' | 'in-edit' | 'amendments' | 'in-review' | 'approved' | 'scheduled'
 
+export interface BrandingGuideline {
+  label: string
+  url: string
+}
+
 export interface ClientProfile {
   musicStyle: string
   editingPace: string
@@ -71,7 +76,7 @@ export interface ClientProfile {
   captionFontImageUrls: string[]
   overlayFont: string
   overlayFontImageUrls: string[]
-  logoUrl: string
+  brandingGuidelines: BrandingGuideline[]
   dos: string[]
   donts: string[]
   generalNotes: string

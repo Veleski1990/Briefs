@@ -44,7 +44,9 @@ function migrateProfiles(profiles: Record<string, Record<string, unknown>>) {
     if (!p.overlayFont) p.overlayFont = ''
     if (!p.captionFontImageUrls) p.captionFontImageUrls = []
     if (!p.overlayFontImageUrls) p.overlayFontImageUrls = []
-    if (!p.logoUrl) p.logoUrl = ''
+    // Deprecated: brand logo is now a Drive link inside brandingGuidelines. Drop base64 blobs.
+    if ('logoUrl' in p) delete p.logoUrl
+    if (!Array.isArray(p.brandingGuidelines)) p.brandingGuidelines = []
   }
   return profiles
 }

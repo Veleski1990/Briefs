@@ -9,6 +9,11 @@ type ClientMeta = {
   originalName?: string
 }
 
+interface BrandingGuideline {
+  label: string
+  url: string
+}
+
 interface ClientProfile {
   musicStyle: string
   editingPace: string
@@ -17,7 +22,7 @@ interface ClientProfile {
   captionFontImageUrls: string[]
   overlayFont: string
   overlayFontImageUrls: string[]
-  logoUrl: string
+  brandingGuidelines: BrandingGuideline[]
   dos: string[]
   donts: string[]
   generalNotes: string
@@ -34,7 +39,7 @@ function emptyProfile(): ClientProfile {
     captionFontImageUrls: [],
     overlayFont: '',
     overlayFontImageUrls: [],
-    logoUrl: '',
+    brandingGuidelines: [],
     dos: [],
     donts: [],
     generalNotes: '',
@@ -102,6 +107,7 @@ export default function ClientsPage() {
         ...p,
         captionFontImageUrls: Array.isArray(p.captionFontImageUrls) ? p.captionFontImageUrls : [],
         overlayFontImageUrls: Array.isArray(p.overlayFontImageUrls) ? p.overlayFontImageUrls : [],
+        brandingGuidelines: Array.isArray(p.brandingGuidelines) ? p.brandingGuidelines : [],
       })
       setDosInput(p.dos.join('\n'))
       setDontsInput(p.donts.join('\n'))
@@ -262,7 +268,8 @@ export default function ClientsPage() {
             <ul className="space-y-0.5 max-h-[420px] overflow-y-auto">
               {filteredActive.map(({ name }) => {
                 const hasProfile = profiles[name] && (
-                  profiles[name].musicStyle || profiles[name].generalNotes || profiles[name].dos.length > 0
+                  profiles[name].musicStyle || profiles[name].generalNotes || profiles[name].dos.length > 0 ||
+                  (profiles[name].brandingGuidelines?.length ?? 0) > 0
                 )
                 return (
                   <li key={name}>
@@ -375,46 +382,49 @@ export default function ClientsPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Brand Logo */}
+              {/* Branding Guidelines — Google Drive links */}
               <div className="rounded-lg border border-brand-border bg-brand-surface-2 p-4 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-brand-muted">Brand Logo</p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-text file:mr-3 file:rounded-md file:border-0 file:bg-brand-maroon file:px-3 file:py-1 file:text-xs file:font-semibold file:text-brand-accent cursor-pointer"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    const reader = new FileReader()
-                    reader.onload = () => setField('logoUrl', reader.result as string)
-                    reader.readAsDataURL(file)
-                  }}
-                />
-                {form.logoUrl && (
-                  <div className="relative flex items-start gap-4">
-                    <img
-                      src={form.logoUrl}
-                      alt="Brand logo"
-                      className="max-h-24 max-w-[200px] rounded-lg border border-brand-border object-contain bg-white p-2"
-                    />
-                    <div className="flex flex-col gap-2">
-                      <a
-                        href={form.logoUrl}
-                        download={`${selected.toLowerCase().replace(/\s+/g, '-')}-logo`}
-                        className="rounded-lg border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-text hover:border-brand-maroon hover:text-brand-maroon transition-colors"
-                      >
-                        Download
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => setField('logoUrl', '')}
-                        className="rounded-lg border border-brand-border px-3 py-1.5 text-xs text-brand-muted hover:border-red-300 hover:text-red-500 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-muted">Branding Guidelines</p>
+                <p className="text-[11px] text-brand-muted leading-snug">
+                  Google Drive (or any) links to logos, brand books, colour palettes, style guides — anything else that lives outside this brief.
+                </p>
+                {form.brandingGuidelines.length === 0 && (
+                  <p className="text-xs text-brand-muted italic">No links yet.</p>
                 )}
+                {form.brandingGuidelines.map((item, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <div className="flex-1 space-y-1.5">
+                      <input
+                        type="text"
+                        placeholder="Label (e.g. Primary logo pack, Brand book)"
+                        value={item.label}
+                        onChange={(e) => setForm(f => ({ ...f, brandingGuidelines: f.brandingGuidelines.map((it, j) => j === i ? { ...it, label: e.target.value } : it) }))}
+                        className={inputClass}
+                      />
+                      <input
+                        type="url"
+                        placeholder="https://drive.google.com/…"
+                        value={item.url}
+                        onChange={(e) => setForm(f => ({ ...f, brandingGuidelines: f.brandingGuidelines.map((it, j) => j === i ? { ...it, url: e.target.value } : it) }))}
+                        className={inputClass}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, brandingGuidelines: f.brandingGuidelines.filter((_, j) => j !== i) }))}
+                      className="rounded-lg border border-brand-border px-3 py-2 text-xs text-brand-muted hover:border-red-300 hover:text-red-500 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, brandingGuidelines: [...f.brandingGuidelines, { label: '', url: '' }] }))}
+                  className="w-full rounded-lg border border-dashed border-brand-border px-3 py-2 text-xs font-semibold text-brand-muted hover:border-brand-maroon hover:text-brand-maroon transition-colors"
+                >
+                  + Add link
+                </button>
               </div>
 
               <div>
