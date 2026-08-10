@@ -185,6 +185,37 @@ function isConnectBoardsMismatch(err: unknown): boolean {
   return /not in the connected boards/i.test(msg)
 }
 
+// Auto-discovers the people/owner column on a board so users don't have to
+// configure MONDAY_OWNER_COL_ID manually. Cached per board.
+const ownerColumnCache = new Map<string, string | null>()
+async function resolveOwnerColumnId(boardId: string): Promise<string | null> {
+  if (process.env.MONDAY_OWNER_COL_ID) return process.env.MONDAY_OWNER_COL_ID
+  if (!boardId) return null
+  if (ownerColumnCache.has(boardId)) return ownerColumnCache.get(boardId) ?? null
+  try {
+    const data = await gql(`
+      query {
+        boards(ids: [${boardId}]) {
+          columns { id title type }
+        }
+      }
+    `)
+    const columns: Array<{ id: string; title: string; type: string }> = data.boards?.[0]?.columns ?? []
+    const owner =
+      columns.find(c => c.type === 'people' && /owner/i.test(c.title)) ??
+      columns.find(c => c.type === 'people')
+    const colId = owner?.id ?? null
+    ownerColumnCache.set(boardId, colId)
+    if (!colId) {
+      console.warn(`[monday] No people-type column found on board ${boardId}. Add a People column to the board to enable owner assignment.`)
+    }
+    return colId
+  } catch (err) {
+    console.error('[monday] resolveOwnerColumnId failed:', err)
+    return null
+  }
+}
+
 // Creates the parent brief item in Monday.com
 export async function createMondayItem(brief: BriefFormData, clientHubItemId?: string | null, groupId?: string, ownerUserId?: number | null): Promise<{
   itemId: string
@@ -204,7 +235,7 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
 
   const dateCol = process.env.MONDAY_DATE_COL_ID
   const clientCol = process.env.MONDAY_CLIENT_COL_ID
-  const ownerCol = process.env.MONDAY_OWNER_COL_ID
+  const ownerCol = await resolveOwnerColumnId(boardId)
   const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
   const groupClause = targetGroupId
     ? `, group_id: ${JSON.stringify(targetGroupId)}`
@@ -269,7 +300,7 @@ export async function createVideoItems(
   const itemIds: Record<string, string> = {}
   const dateCol   = process.env.MONDAY_DATE_COL_ID
   const clientCol = process.env.MONDAY_CLIENT_COL_ID
-  const ownerCol  = process.env.MONDAY_OWNER_COL_ID
+  const ownerCol  = await resolveOwnerColumnId(boardId)
   const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
   const groupClause = targetGroupId
     ? `, group_id: ${JSON.stringify(targetGroupId)}`

@@ -68,10 +68,8 @@ export async function POST(request: NextRequest) {
       findMondayUserId(brief.briefFilledBy),
     ])
 
-    if (!process.env.MONDAY_OWNER_COL_ID) {
-      console.warn('[submit-brief] MONDAY_OWNER_COL_ID env var is not set. Owner will not be assigned on the item. Run /api/monday-setup?board=YOUR_BOARD_ID to find the Owner/People column id and add it in Vercel.')
-    } else if (!ownerUserId && brief.briefFilledBy && brief.briefFilledBy.toLowerCase() !== 'other') {
-      console.warn(`[submit-brief] Could not resolve monday.com user for "${brief.briefFilledBy}". Owner will not be assigned.`)
+    if (!ownerUserId && brief.briefFilledBy && brief.briefFilledBy.toLowerCase() !== 'other') {
+      console.warn(`[submit-brief] Could not resolve monday.com user for "${brief.briefFilledBy}". Owner will not be assigned. Make sure that name exists as a user in your monday.com account.`)
     }
 
     const { itemId, itemUrl, description } = await createMondayItem(brief, clientHubItemId, groupId, ownerUserId)
