@@ -113,7 +113,7 @@ export default function BriefEditForm({ taskId, stored }: { taskId: string; stor
             <div>
               <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#efff72]/70">Edit Brief</p>
               <h1 className="text-2xl font-bold text-white">{form.client || 'Brief'}</h1>
-              <p className="mt-1 text-sm text-white/60">Changes save back to the brief page and update ClickUp.</p>
+              <p className="mt-1 text-sm text-white/60">Changes save back to the brief page and update Monday.com.</p>
             </div>
             <a
               href={`/brief/${taskId}`}
@@ -297,7 +297,7 @@ export default function BriefEditForm({ taskId, stored }: { taskId: string; stor
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
           <p className="mt-2 text-center text-xs text-gray-400">
-            This will update the brief page and sync to ClickUp.
+            This will update the brief page and sync to Monday.com.
           </p>
         </div>
 

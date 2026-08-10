@@ -460,7 +460,7 @@ export default async function BriefPage({ params }: { params: Promise<{ taskId: 
           </div>
         )}
 
-        {/* ── CLICKUP LINK ── */}
+        {/* ── MONDAY LINK ── */}
         {taskUrl && (
           <div className="pb-2 text-center">
             <a
@@ -469,7 +469,7 @@ export default async function BriefPage({ params }: { params: Promise<{ taskId: 
               rel="noopener noreferrer"
               className="text-xs text-gray-400 underline hover:text-gray-600"
             >
-              View in ClickUp →
+              View in Monday →
             </a>
           </div>
         )}

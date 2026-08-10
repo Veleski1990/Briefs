@@ -30,7 +30,7 @@ function SuccessBanner({ briefUrl, taskUrl }: { briefUrl: string; taskUrl?: stri
       <div className="px-5 py-4">
         <p className="text-sm font-bold text-brand-accent">Brief submitted!</p>
         <p className="mt-0.5 text-xs text-brand-offwhite opacity-80">
-          ClickUp task created. Copy the editor brief link below to share with your editor.
+          Monday.com item created. Copy the editor brief link below to share with your editor.
         </p>
       </div>
       <div className="border-t border-brand-accent/20 bg-black/20 px-5 py-3">
@@ -61,7 +61,7 @@ function SuccessBanner({ briefUrl, taskUrl }: { briefUrl: string; taskUrl?: stri
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-4 py-2 text-xs font-semibold text-brand-offwhite hover:bg-white/20 transition-all"
           >
-            Open ClickUp task →
+            Open in Monday →
           </a>
         </div>
       )}
@@ -218,7 +218,7 @@ export default function BriefPage() {
         setResult(data)
         videoCounter.current = 2
         setForm({ ...emptyForm(), shootDate: today(), dateSent: today(), pipeline: form.pipeline })
-        // Auto-open the ClickUp task in a new tab
+        // Auto-open the Monday.com item in a new tab
         if (data.taskUrl) window.open(data.taskUrl, '_blank')
       } else {
         setSubmitState('error')
@@ -242,7 +242,7 @@ export default function BriefPage() {
               </p>
               <h1 className="font-heading text-4xl text-brand-offwhite">Editor Brief</h1>
               <p className="mt-1 text-sm text-brand-offwhite opacity-80">
-                Fill in the details below and submit — a task will be created in ClickUp automatically.
+                Fill in the details below and submit — a task will be created in Monday.com automatically.
               </p>
             </div>
             <div className="flex flex-shrink-0 flex-col items-end gap-2 pt-1">
@@ -439,7 +439,7 @@ export default function BriefPage() {
               disabled={submitState === 'submitting' || !form.pipeline || !form.client || !form.shootDate}
               className="w-full rounded-xl bg-brand-maroon px-6 py-3.5 text-sm font-semibold text-brand-accent transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitState === 'submitting' ? 'Submitting…' : 'Submit Brief to ClickUp'}
+              {submitState === 'submitting' ? 'Submitting…' : 'Submit Brief to Monday'}
             </button>
             <p className="mt-3 text-center text-xs text-brand-muted">
               {form.pipeline

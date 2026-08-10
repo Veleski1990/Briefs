@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
         hint: {
           'MONDAY_STATUS_COL_ID': 'find the "Status" column id above',
           'MONDAY_DATE_COL_ID':   'find the "Date" or "Due date" column id above',
-          'MONDAY_CLIENT_COL_ID': 'find a client/text column id above (optional)',
+          'MONDAY_CLIENT_COL_ID': 'find the client Connect Boards column id above',
+          'MONDAY_OWNER_COL_ID':  'find the "Owner" or "Person" (people) column id above — required for owner assignment',
           'MONDAY_TODO_GROUP_ID': 'find the "To-Do" or active group id above',
         },
       })

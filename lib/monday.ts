@@ -106,18 +106,28 @@ export async function findMonthGroupId(boardId: string, publicationMonth: string
   }
 }
 
-// Looks up a Monday.com workspace user by name (case-insensitive)
+// Looks up a Monday.com workspace user by name (case-insensitive).
+// Matches exact full name, first name, email prefix, or as a fallback,
+// any user whose name/email contains the target string.
 export async function findMondayUserId(name: string): Promise<number | null> {
-  if (!name) return null
+  if (!name || name.toLowerCase() === 'other') return null
   try {
     const data = await gql(`query { users(limit: 200) { id name email } }`)
     const users: Array<{ id: string; name: string; email: string }> = data.users ?? []
     const target = name.toLowerCase().trim()
-    const match = users.find(u =>
-      u.name.toLowerCase().trim() === target ||
-      u.name.toLowerCase().split(' ')[0] === target ||
-      u.email?.toLowerCase().split('@')[0] === target
-    )
+    const match =
+      users.find(u =>
+        u.name.toLowerCase().trim() === target ||
+        u.name.toLowerCase().split(' ')[0] === target ||
+        u.email?.toLowerCase().split('@')[0] === target
+      ) ??
+      users.find(u =>
+        u.name.toLowerCase().includes(target) ||
+        u.email?.toLowerCase().includes(target)
+      )
+    if (!match) {
+      console.warn(`[monday] findMondayUserId: no user matched "${name}". Checked ${users.length} users. Add them to monday.com or update TEAM_MEMBERS to match an existing name.`)
+    }
     return match ? Number(match.id) : null
   } catch (err) {
     console.error('[monday] findMondayUserId failed:', err)

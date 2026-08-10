@@ -52,7 +52,7 @@ export const FUNNEL_STAGE_DESCRIPTIONS: Record<string, string> = {
   BOF: 'Bottom of Funnel — conversion content. Speak to warm audiences. Drive action: booking, purchase, DM. Include social proof, offers, CTAs.',
 }
 
-export const TEAM_MEMBERS = ['Olivia', 'Vanessa', 'Steven', 'Other'] as const
+export const TEAM_MEMBERS = ['Olivia', 'Chelsea', 'Vanessa', 'Steven', 'Other'] as const
 
 // ClickUp pipeline list IDs
 export const PIPELINE_LIST_IDS: Record<string, string> = {
