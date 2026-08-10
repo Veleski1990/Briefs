@@ -46,15 +46,12 @@ async function gql(queryStr: string) {
 }
 
 function buildColumnValues(overrides: Record<string, unknown> = {}): string {
-  const vals: Record<string, unknown> = {}
-  const statusCol  = process.env.MONDAY_STATUS_COL_ID
-  const dateCol    = process.env.MONDAY_DATE_COL_ID
-  const clientCol  = process.env.MONDAY_CLIENT_COL_ID
-  const ownerCol   = process.env.MONDAY_OWNER_COL_ID
-  if (statusCol) vals[statusCol] = overrides[statusCol] ?? { label: 'Editing' }
-  if (dateCol && overrides[dateCol]) vals[dateCol] = overrides[dateCol]
-  if (clientCol && overrides[clientCol]) vals[clientCol] = overrides[clientCol]
-  if (ownerCol && overrides[ownerCol]) vals[ownerCol] = overrides[ownerCol]
+  const vals: Record<string, unknown> = { ...overrides }
+  // Default status to "Editing" if a status column is configured and no explicit override was supplied
+  const statusCol = process.env.MONDAY_STATUS_COL_ID
+  if (statusCol && !(statusCol in vals)) {
+    vals[statusCol] = { label: 'Editing' }
+  }
   return JSON.stringify(vals)
 }
 
