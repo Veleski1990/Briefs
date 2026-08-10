@@ -165,6 +165,16 @@ function briefDescription(brief: BriefFormData): string {
   ].filter(Boolean).join('\n')
 }
 
+// If the Client connect column rejects the linked item (usually because the
+// pipeline board's Connect Boards column points at a different board than
+// MONDAY_CLIENT_HUB_BOARD_ID), we retry without the client link so submission
+// still succeeds. Fix on monday.com side: reconfigure the column to connect
+// to the Client Hub board.
+function isConnectBoardsMismatch(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err)
+  return /not in the connected boards/i.test(msg)
+}
+
 // Creates the parent brief item in Monday.com
 export async function createMondayItem(brief: BriefFormData, clientHubItemId?: string | null, groupId?: string, ownerUserId?: number | null): Promise<{
   itemId: string
@@ -185,26 +195,39 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
   const dateCol = process.env.MONDAY_DATE_COL_ID
   const clientCol = process.env.MONDAY_CLIENT_COL_ID
   const ownerCol = process.env.MONDAY_OWNER_COL_ID
-  const colVals = buildColumnValues({
-    ...(dateCol && brief.shootDate ? { [dateCol]: { date: brief.shootDate } } : {}),
-    ...(clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
-    ...(ownerCol && ownerUserId ? { [ownerCol]: { personsAndTeams: [{ id: ownerUserId, kind: 'person' }] } } : {}),
-  })
-
   const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
   const groupClause = targetGroupId
     ? `, group_id: ${JSON.stringify(targetGroupId)}`
     : ''
 
-  const data = await gql(`
-    mutation {
-      create_item(
-        board_id: ${boardId}${groupClause},
-        item_name: ${JSON.stringify(itemName)},
-        column_values: ${JSON.stringify(colVals)}
-      ) { id url }
+  const runCreate = async (includeClient: boolean) => {
+    const colVals = buildColumnValues({
+      ...(dateCol && brief.shootDate ? { [dateCol]: { date: brief.shootDate } } : {}),
+      ...(includeClient && clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
+      ...(ownerCol && ownerUserId ? { [ownerCol]: { personsAndTeams: [{ id: ownerUserId, kind: 'person' }] } } : {}),
+    })
+    return gql(`
+      mutation {
+        create_item(
+          board_id: ${boardId}${groupClause},
+          item_name: ${JSON.stringify(itemName)},
+          column_values: ${JSON.stringify(colVals)}
+        ) { id url }
+      }
+    `)
+  }
+
+  let data
+  try {
+    data = await runCreate(true)
+  } catch (err) {
+    if (isConnectBoardsMismatch(err) && clientHubItemId) {
+      console.warn('[monday] Client connect column on pipeline board does not accept items from MONDAY_CLIENT_HUB_BOARD_ID. Creating brief without client link. Fix: reconfigure the Connect Boards column on the pipeline board to connect to the Client Hub board.')
+      data = await runCreate(false)
+    } else {
+      throw err
     }
-  `)
+  }
 
   return {
     itemId:      data.create_item.id as string,
@@ -247,11 +270,12 @@ export async function createVideoItems(
     const label = raw.length > 60 ? raw.slice(0, 57).trimEnd() + '…' : raw
     const itemName = `${label ? `${label} — ` : ''}${v.format || 'VIDEO'}${v.duration ? ` (${v.duration})` : ''}`
 
-    const colVals = buildColumnValues({
+    const buildVals = (includeClient: boolean) => buildColumnValues({
       ...(dateCol && v.deadline   ? { [dateCol]: { date: v.deadline } } : {}),
-      ...(clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
+      ...(includeClient && clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
       ...(ownerCol && ownerUserId ? { [ownerCol]: { personsAndTeams: [{ id: ownerUserId, kind: 'person' }] } } : {}),
     })
+    const colVals = buildVals(true)
 
     // New structured contentLinks take priority; fall back to legacy aRoll/bRoll strings
     const contentLines = v.contentLinks && v.contentLinks.length > 0
@@ -276,16 +300,28 @@ export async function createVideoItems(
       brief?.generalInstructions && `**General Instructions:** ${brief.generalInstructions}`,
     ].filter(Boolean).join('\n')
 
+    const runCreate = (vals: string) => gql(`
+      mutation {
+        create_item(
+          board_id: ${boardId}${groupClause},
+          item_name: ${JSON.stringify(itemName)},
+          column_values: ${JSON.stringify(vals)}
+        ) { id }
+      }
+    `)
+
     try {
-      const data = await gql(`
-        mutation {
-          create_item(
-            board_id: ${boardId}${groupClause},
-            item_name: ${JSON.stringify(itemName)},
-            column_values: ${JSON.stringify(colVals)}
-          ) { id }
+      let data
+      try {
+        data = await runCreate(colVals)
+      } catch (err) {
+        if (isConnectBoardsMismatch(err) && clientHubItemId) {
+          console.warn(`[monday] Client connect column rejected video "${itemName}". Creating without client link. Fix the Connect Boards column configuration.`)
+          data = await runCreate(buildVals(false))
+        } else {
+          throw err
         }
-      `)
+      }
       const itemId = data.create_item.id as string
       itemIds[v.id] = itemId
 
