@@ -1,6 +1,7 @@
 import { getRedis } from '@/lib/redis'
 import type { StoredBrief, VideoRow, BriefStatus, ClientProfile } from '@/lib/types'
 import { FUNNEL_STAGE_DESCRIPTIONS } from '@/lib/constants'
+import { normalizeExternalUrl } from '@/lib/url'
 import { notFound } from 'next/navigation'
 import { VideoStatusButton, BulkStatusBar } from './StatusControls'
 import SubmitAssetButton from './SubmitAssetButton'
@@ -43,9 +44,10 @@ function formatDate(dateStr: string) {
 
 function ExternalLink({ href, label }: { href: string; label?: string }) {
   if (!href?.trim() || href === '—') return <span className="text-gray-400">—</span>
+  const safeHref = normalizeExternalUrl(href)
   return (
     <a
-      href={href}
+      href={safeHref}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-[#4f1c1e] underline underline-offset-2 hover:opacity-70 break-all"
@@ -121,7 +123,7 @@ function ClientProfileCard({ client, profile }: { client: string; profile: Clien
             <ul className="space-y-0.5">
               {profile!.brandingGuidelines.filter(g => g.url).map((g, i) => (
                 <li key={i} className="text-sm">
-                  <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-[#4f1c1e] underline underline-offset-2 hover:opacity-70 break-all">
+                  <a href={normalizeExternalUrl(g.url)} target="_blank" rel="noopener noreferrer" className="text-[#4f1c1e] underline underline-offset-2 hover:opacity-70 break-all">
                     {g.label || g.url}
                   </a>
                 </li>
@@ -263,7 +265,7 @@ function VideoCard({
               <ul className="space-y-1.5">
                 {video.contentLinks.filter(cl => cl.url).map((cl, i) => (
                   <li key={i} className="text-sm">
-                    <a href={cl.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{cl.url}</a>
+                    <a href={normalizeExternalUrl(cl.url)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{cl.url}</a>
                     {cl.notes && <span className="text-gray-600 ml-2">— {cl.notes}</span>}
                   </li>
                 ))}

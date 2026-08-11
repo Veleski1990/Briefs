@@ -1,5 +1,7 @@
 'use client'
 
+import { normalizeExternalUrl } from '@/lib/url'
+
 interface BrandingGuideline {
   label: string
   url: string
@@ -103,7 +105,7 @@ export default function ClientStylePanel({ client, profile }: ClientStylePanelPr
               <ul className="space-y-0.5">
                 {profile.brandingGuidelines.filter(g => g.url).map((g, i) => (
                   <li key={i} className="text-sm">
-                    <a href={g.url} target="_blank" rel="noopener noreferrer" className="text-brand-maroon hover:underline break-all">
+                    <a href={normalizeExternalUrl(g.url)} target="_blank" rel="noopener noreferrer" className="text-brand-maroon hover:underline break-all">
                       {g.label || g.url}
                     </a>
                   </li>

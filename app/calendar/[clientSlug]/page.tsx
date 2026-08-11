@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { STATUS_COLOURS, STATUS_STYLES, slugToDisplay } from '@/lib/calendar-types'
 import type { CalendarPost, PostStatus } from '@/lib/calendar-types'
+import { normalizeExternalUrl } from '@/lib/url'
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -297,7 +298,7 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
               </div>
 
               {selected.previewUrl && (
-                <a href={selected.previewUrl} target="_blank" rel="noopener noreferrer"
+                <a href={normalizeExternalUrl(selected.previewUrl)} target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#4f1c1e] px-4 py-3 text-sm font-bold text-[#efff72] hover:opacity-90 transition-opacity">
                   Watch Preview →
                 </a>

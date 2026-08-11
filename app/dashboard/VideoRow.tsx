@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { BriefStatus } from '@/lib/types'
+import { normalizeExternalUrl } from '@/lib/url'
 
 const STATUS_PILL: Record<BriefStatus, string> = {
   'not-started': 'bg-gray-100 text-gray-600',
@@ -82,7 +83,7 @@ export default function VideoRow({
 
       <div className="flex flex-shrink-0 items-center gap-2 self-center">
         {assetUrl && (
-          <a href={assetUrl} target="_blank" rel="noopener noreferrer"
+          <a href={normalizeExternalUrl(assetUrl)} target="_blank" rel="noopener noreferrer"
             className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800 hover:bg-purple-200 whitespace-nowrap">
             Asset →
           </a>

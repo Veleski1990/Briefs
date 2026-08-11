@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { normalizeExternalUrl } from '@/lib/url'
 
 export default function SubmitAssetButton({
   taskId,
@@ -17,12 +18,14 @@ export default function SubmitAssetButton({
   const [done, setDone] = useState(!!existingUrl)
 
   const submit = async () => {
-    if (!url.trim()) return
+    const cleaned = normalizeExternalUrl(url)
+    if (!cleaned) return
     setSaving(true)
+    setUrl(cleaned)
     await fetch(`/api/brief/${taskId}/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoId, status: 'in-review', assetUrl: url.trim() }),
+      body: JSON.stringify({ videoId, status: 'in-review', assetUrl: cleaned }),
     })
     setSaving(false)
     setDone(true)
@@ -35,7 +38,7 @@ export default function SubmitAssetButton({
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest text-purple-300 mb-1">Final Asset Submitted</p>
           <a
-            href={url}
+            href={normalizeExternalUrl(url)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-purple-200 underline underline-offset-2 break-all hover:text-white"

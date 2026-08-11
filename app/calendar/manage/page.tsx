@@ -5,6 +5,7 @@ const PAID_MEDIA_EXCLUDE = new Set(['FULFILMENT AUS', 'YTSS', 'FLO BUYERS AGENTS
 import { clientToSlug, slugToDisplay, STATUS_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
 import ScheduleGenerator from './ScheduleGenerator'
 import type { CalendarPost, PostFormat, PostCategory, PostStatus } from '@/lib/calendar-types'
+import { normalizeExternalUrl } from '@/lib/url'
 
 // ── Mini calendar preview (same grid logic as client page) ──
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
@@ -505,7 +506,7 @@ export default function CalendarManagePage() {
                   </div>
                   <div className="flex flex-shrink-0 gap-2">
                     {post.previewUrl && (
-                      <a href={post.previewUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:border-gray-400">Preview</a>
+                      <a href={normalizeExternalUrl(post.previewUrl)} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:border-gray-400">Preview</a>
                     )}
                     <button onClick={() => handleEdit(post)} className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:border-gray-400">Edit</button>
                     <button onClick={() => handleDelete(post.id)} className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-400 hover:border-red-200 hover:text-red-500">Delete</button>
