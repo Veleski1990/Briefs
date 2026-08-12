@@ -54,6 +54,8 @@ export const FUNNEL_STAGE_DESCRIPTIONS: Record<string, string> = {
 
 export const TEAM_MEMBERS = ['Olivia', 'Chelsea', 'Vanessa', 'Steven', 'Other'] as const
 
+export const CONTENT_PILLARS = ['Sales', 'Views', 'Connection', 'Entertain', 'Educate'] as const
+
 // ClickUp pipeline list IDs
 export const PIPELINE_LIST_IDS: Record<string, string> = {
   'ORGANIC RETAINER': '901614165179',

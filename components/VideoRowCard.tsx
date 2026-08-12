@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { VIDEO_FORMATS } from '@/lib/constants'
+import { VIDEO_FORMATS, CONTENT_PILLARS } from '@/lib/constants'
 import type { VideoRow } from '@/lib/types'
 import SelectField from './SelectField'
 import TextField from './TextField'
@@ -148,14 +148,14 @@ export default function VideoRowCard({
         />
       </div>
 
-      {/* Always visible: Angle */}
+      {/* Always visible: Content Pillar */}
       <div className="mt-4">
-        <TextField
-          id={`angle-${video.id}`}
-          label="Angle / Objective"
+        <SelectField
+          id={`pillar-${video.id}`}
+          label="Content Pillar"
           value={video.angleObjective}
+          options={CONTENT_PILLARS}
           onChange={update('angleObjective')}
-          placeholder="What is this video trying to achieve?"
         />
       </div>
 

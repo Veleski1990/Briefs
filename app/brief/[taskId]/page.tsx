@@ -255,13 +255,13 @@ function VideoCard({
 
       <div className="divide-y divide-gray-100">
         <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2">
-          <Field label="Angle / Objective" value={video.angleObjective} />
+          <Field label="Content Pillar" value={video.angleObjective} />
           <Field label="First 10 seconds" value={video.hook} />
         </div>
         <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2 bg-gray-50">
-          {video.contentLinks && video.contentLinks.length > 0 ? (
-            <div className="sm:col-span-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">Content Links</p>
+          <div className="sm:col-span-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">Content Links</p>
+            {video.contentLinks && video.contentLinks.filter(cl => cl.url).length > 0 ? (
               <ul className="space-y-1.5">
                 {video.contentLinks.filter(cl => cl.url).map((cl, i) => (
                   <li key={i} className="text-sm">
@@ -270,13 +270,10 @@ function VideoCard({
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : (
-            <>
-              <MultiLinkField label="A-Roll Footage" value={video.aRollLinks || (video as VideoRow & { footageLink?: string }).footageLink || ''} />
-              <MultiLinkField label="B-Roll Footage" value={video.bRollLinks || ''} />
-            </>
-          )}
+            ) : (
+              <span className="text-gray-400 text-sm">—</span>
+            )}
+          </div>
           <LinkField label="Script" value={video.scriptLink} />
           <LinkField label="Music" value={video.musicLink} />
         </div>
@@ -390,29 +387,13 @@ export default async function BriefPage({ params }: { params: Promise<{ taskId: 
         {/* ── CLIENT STYLE GUIDE ── */}
         <ClientProfileCard client={brief.client} profile={clientProfile} />
 
-        {/* ── SHOOT CONTEXT ── */}
-        <div className="rounded-2xl bg-white shadow-sm border border-gray-200">
-          <div className="border-b border-gray-100 px-5 py-3.5">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-[#4f1c1e]">Shoot Context</h2>
+        {/* ── FUNNEL STAGE ── */}
+        {funnelDesc && (
+          <div className="rounded-xl border border-[#4f1c1e]/20 bg-[#4f1c1e]/5 px-4 py-3">
+            <p className="text-xs font-semibold text-[#4f1c1e] mb-0.5">Funnel Stage: {brief.funnelStage}</p>
+            <p className="text-sm text-gray-700 leading-snug">{funnelDesc}</p>
           </div>
-          <div className="space-y-4 px-5 py-4">
-            {brief.clientBriefLink && (
-              <div>
-                <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Client Brief</p>
-                <ExternalLink href={brief.clientBriefLink} label="Open client brief doc" />
-              </div>
-            )}
-            <Field label="What Was Filmed" value={brief.whatWasFilmed} />
-            <Field label="Location / Vibe" value={brief.locationVibe} />
-            <Field label="Shoot Objective" value={brief.shootObjective} />
-            {funnelDesc && (
-              <div className="rounded-xl border border-[#4f1c1e]/20 bg-[#4f1c1e]/5 px-4 py-3">
-                <p className="text-xs font-semibold text-[#4f1c1e] mb-0.5">Funnel Stage: {brief.funnelStage}</p>
-                <p className="text-sm text-gray-700 leading-snug">{funnelDesc}</p>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* ── VIDEOS ── */}
         <div className="space-y-3">

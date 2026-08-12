@@ -347,26 +347,6 @@ export default function BriefPage() {
               />
             </div>
 
-            <div className="mt-4 space-y-4">
-              <TextField
-                id="clientBriefLink"
-                label="Client Brief Link"
-                value={form.clientBriefLink}
-                onChange={(v) => setField('clientBriefLink', v)}
-                placeholder="Link to the client brief doc (Google Docs, Notion, etc.)"
-                type="url"
-              />
-              <TextField
-                id="whatWasFilmed"
-                label="Shoot Context"
-                value={form.whatWasFilmed}
-                onChange={(v) => setField('whatWasFilmed', v)}
-                placeholder="What was filmed, the location and vibe, and what the shoot is trying to achieve — e.g. Kitchen team at Rowanos, warm and energetic vibe, goal is to drive bookings via Instagram"
-                multiline
-                rows={4}
-              />
-            </div>
-
             {form.client && (
               <ClientStylePanel
                 client={form.client}

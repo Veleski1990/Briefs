@@ -164,9 +164,6 @@ function briefDescription(brief: BriefFormData): string {
     brief.assignedEditor      && `**Editor:** ${brief.assignedEditor}`,
     brief.platform            && `**Platform:** ${brief.platform}`,
     brief.funnelStage         && `**Funnel Stage:** ${brief.funnelStage}`,
-    brief.whatWasFilmed       && `**What Was Filmed:** ${brief.whatWasFilmed}`,
-    brief.locationVibe        && `**Location/Vibe:** ${brief.locationVibe}`,
-    brief.shootObjective      && `**Shoot Objective:** ${brief.shootObjective}`,
     brief.generalInstructions && `**General Instructions:** ${brief.generalInstructions}`,
     brief.referenceLinks      && `**Reference Videos:** ${brief.referenceLinks}`,
   ].filter(Boolean).join('\n')
@@ -223,9 +220,10 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
   const boardId = getBoardId(brief.pipeline)
   if (!boardId) throw new Error('MONDAY_ORGANIC_BOARD_ID not configured')
 
-  // Prefer the first video's hook as the task name (falls back to shoot objective)
+  // Prefer the first video's hook as the task name, then its content pillar
   const firstHook = brief.videos?.[0]?.hook?.trim()
-  const rawTopic = firstHook || brief.shootObjective || brief.whatWasFilmed || ''
+  const firstPillar = brief.videos?.[0]?.angleObjective?.trim()
+  const rawTopic = firstHook || firstPillar || ''
   const topic = rawTopic.length > 80 ? rawTopic.slice(0, 77).trimEnd() + '…' : rawTopic
   const itemName = topic || `Shoot — ${brief.shootDate}`
   const description = briefDescription(brief)
@@ -315,26 +313,20 @@ export async function createVideoItems(
     })
     const colVals = buildVals(true)
 
-    // New structured contentLinks take priority; fall back to legacy aRoll/bRoll strings
-    const contentLines = v.contentLinks && v.contentLinks.length > 0
-      ? v.contentLinks.filter(cl => cl.url?.trim()).map((cl, i) =>
-          `**Content Link${i > 0 ? ` ${i+1}` : ''}:** ${cl.url}${cl.notes ? ` — ${cl.notes}` : ''}`
-        )
-      : [
-          ...(v.aRollLinks ? v.aRollLinks.split('\n').filter(Boolean).map((l, i) => `**Content Link${i > 0 ? ` ${i+1}` : ''}:** ${l}`) : []),
-          ...(v.bRollLinks ? v.bRollLinks.split('\n').filter(Boolean).map((l, i) => `**Content Link${i > 0 ? ` ${i+1}` : ''} (B-Roll):** ${l}`) : []),
-        ]
+    const contentLines = (v.contentLinks ?? [])
+      .filter(cl => cl.url?.trim())
+      .map((cl, i) => `**Content Link${i > 0 ? ` ${i+1}` : ''}:** ${cl.url}${cl.notes ? ` — ${cl.notes}` : ''}`)
 
     const descLines = [
       brief?.shootDate           && `**Shoot Date:** ${brief.shootDate}`,
       brief?.assignedEditor      && `**Editor:** ${brief.assignedEditor}`,
+      v.angleObjective           && `**Content Pillar:** ${v.angleObjective}`,
       v.hook                     && `**First 10 seconds:** ${v.hook}`,
       ...contentLines,
       v.scriptLink               && `**Script:** ${v.scriptLink}`,
       v.musicLink                && `**Music:** ${v.musicLink}`,
       v.textOverlays             && `**Text Overlays:** ${v.textOverlays}`,
       v.specialNotes             && `**Special Notes:** ${v.specialNotes}`,
-      brief?.whatWasFilmed       && `**Shoot Context:** ${brief.whatWasFilmed}`,
       brief?.generalInstructions && `**General Instructions:** ${brief.generalInstructions}`,
     ].filter(Boolean).join('\n')
 

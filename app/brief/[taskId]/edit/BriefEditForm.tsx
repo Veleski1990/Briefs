@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import {
   CLIENTS, PLATFORMS, PIPELINES, PIPELINE_DESCRIPTIONS,
   FUNNEL_STAGES, FUNNEL_STAGE_DESCRIPTIONS, TEAM_MEMBERS,
+  CONTENT_PILLARS,
 } from '@/lib/constants'
 import type { BriefFormData, VideoRow, StoredBrief } from '@/lib/types'
 
 function emptyVideo(id: string): VideoRow {
-  return { id, format: '', duration: '', angleObjective: '', hook: '', aRollLinks: '', bRollLinks: '', scriptLink: '', musicLink: '', textOverlays: '', specialNotes: '', deadline: '' }
+  return { id, format: '', duration: '', angleObjective: '', hook: '', aRollLinks: '', bRollLinks: '', contentLinks: [], scriptLink: '', musicLink: '', textOverlays: '', specialNotes: '', deadline: '' }
 }
 
 const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-[#4f1c1e] focus:outline-none focus:ring-1 focus:ring-[#4f1c1e] transition-colors'
@@ -19,38 +20,34 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <div><label className={labelClass}>{label}</label>{children}</div>
 }
 
-function FootageLinks({ label, value, onChange }: { label: string; value: string; onChange: (val: string) => void }) {
-  const [links, setLinks] = useState<string[]>(() => {
-    const parsed = (value || '').split('\n').map((l) => l.trim()).filter(Boolean)
-    return parsed.length > 0 ? parsed : ['']
-  })
-
-  const update = (i: number, val: string) => {
-    const next = [...links]; next[i] = val
-    setLinks(next)
-    onChange(next.filter(Boolean).join('\n'))
+function ContentLinksEditor({ links, onChange }: {
+  links: Array<{ url: string; notes?: string }>
+  onChange: (next: Array<{ url: string; notes?: string }>) => void
+}) {
+  const rows = links.length > 0 ? links : [{ url: '', notes: '' }]
+  const update = (i: number, patch: Partial<{ url: string; notes: string }>) => {
+    const next = rows.map((r, idx) => idx === i ? { ...r, ...patch } : r)
+    onChange(next.filter(r => r.url.trim() || r.notes?.trim()))
   }
-  const add = () => setLinks((prev) => [...prev, ''])
-  const remove = (i: number) => {
-    const next = links.filter((_, idx) => idx !== i)
-    const safe = next.length > 0 ? next : ['']
-    setLinks(safe)
-    onChange(safe.filter(Boolean).join('\n'))
-  }
+  const add = () => onChange([...rows, { url: '', notes: '' }])
+  const remove = (i: number) => onChange(rows.filter((_, idx) => idx !== i))
 
   return (
     <div>
-      <label className={labelClass}>{label}</label>
-      <div className="space-y-1.5">
-        {links.map((link, i) => (
-          <div key={i} className="flex items-center gap-1.5">
-            <input type="url" className={inputClass} value={link} onChange={(e) => update(i, e.target.value)} placeholder="Drive / Frame.io URL" />
-            {links.length > 1 && (
-              <button type="button" onClick={() => remove(i)} className="text-xs text-gray-400 hover:text-red-400 px-1">✕</button>
-            )}
+      <label className={labelClass}>Content Links</label>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="rounded-lg border border-gray-200 bg-white p-2 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <input type="url" className={inputClass} value={row.url} onChange={(e) => update(i, { url: e.target.value })} placeholder="Drive / Frame.io URL" />
+              {rows.length > 1 && (
+                <button type="button" onClick={() => remove(i)} className="text-xs text-gray-400 hover:text-red-400 px-1">✕</button>
+              )}
+            </div>
+            <input type="text" className={`${inputClass} text-xs`} value={row.notes ?? ''} onChange={(e) => update(i, { notes: e.target.value })} placeholder="Notes (optional)" />
           </div>
         ))}
-        <button type="button" onClick={add} className="text-xs text-gray-400 hover:text-[#4f1c1e] transition-colors">+ Add link</button>
+        <button type="button" onClick={add} className="text-xs text-gray-400 hover:text-[#4f1c1e] transition-colors">+ Add another link</button>
       </div>
     </div>
   )
@@ -174,23 +171,6 @@ export default function BriefEditForm({ taskId, stored }: { taskId: string; stor
           </div>
         </div>
 
-        {/* Shoot Context */}
-        <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm space-y-4">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#4f1c1e]">Shoot Context</p>
-          <Field label="Client Brief Link">
-            <input type="url" className={inputClass} value={form.clientBriefLink} onChange={(e) => setField('clientBriefLink', e.target.value)} placeholder="Google Docs, Notion, etc." />
-          </Field>
-          <Field label="What Was Filmed">
-            <textarea className={`${inputClass} resize-y`} rows={3} value={form.whatWasFilmed} onChange={(e) => setField('whatWasFilmed', e.target.value)} />
-          </Field>
-          <Field label="Location / Vibe">
-            <input className={inputClass} value={form.locationVibe} onChange={(e) => setField('locationVibe', e.target.value)} />
-          </Field>
-          <Field label="Shoot Objective">
-            <textarea className={`${inputClass} resize-y`} rows={2} value={form.shootObjective} onChange={(e) => setField('shootObjective', e.target.value)} />
-          </Field>
-        </div>
-
         {/* Funnel Stage */}
         <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
           <p className="mb-3 text-sm font-bold uppercase tracking-widest text-[#4f1c1e]">Funnel Stage</p>
@@ -233,8 +213,11 @@ export default function BriefEditForm({ taskId, stored }: { taskId: string; stor
                   <input className={inputClass} value={video.duration} onChange={(e) => updateVideo(video.id, 'duration', e.target.value)} placeholder="e.g. 30s" />
                 </Field>
                 <div className="sm:col-span-2">
-                  <Field label="Angle / Objective">
-                    <textarea className={`${inputClass} resize-y`} rows={2} value={video.angleObjective} onChange={(e) => updateVideo(video.id, 'angleObjective', e.target.value)} />
+                  <Field label="Content Pillar">
+                    <select className={inputClass} value={video.angleObjective} onChange={(e) => updateVideo(video.id, 'angleObjective', e.target.value)}>
+                      <option value="">Select…</option>
+                      {CONTENT_PILLARS.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
                   </Field>
                 </div>
                 <div className="sm:col-span-2">
@@ -242,9 +225,14 @@ export default function BriefEditForm({ taskId, stored }: { taskId: string; stor
                     <input className={inputClass} value={video.hook} onChange={(e) => updateVideo(video.id, 'hook', e.target.value)} />
                   </Field>
                 </div>
-                <div className="sm:col-span-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <FootageLinks label="A-Roll Footage" value={video.aRollLinks || ''} onChange={(val) => updateVideo(video.id, 'aRollLinks', val)} />
-                  <FootageLinks label="B-Roll Footage" value={video.bRollLinks || ''} onChange={(val) => updateVideo(video.id, 'bRollLinks', val)} />
+                <div className="sm:col-span-2">
+                  <ContentLinksEditor
+                    links={video.contentLinks ?? []}
+                    onChange={(next) => setForm(prev => ({
+                      ...prev,
+                      videos: prev.videos.map(v => v.id === video.id ? { ...v, contentLinks: next } : v),
+                    }))}
+                  />
                 </div>
                 <Field label="Script Link">
                   <input type="url" className={inputClass} value={video.scriptLink} onChange={(e) => updateVideo(video.id, 'scriptLink', e.target.value)} />
