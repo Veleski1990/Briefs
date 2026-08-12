@@ -275,7 +275,7 @@ export default function BriefPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {/* ── SECTION 1: Brief Details (incl. pipeline + shoot context) ── */}
           <section className="rounded-xl bg-brand-surface p-6 shadow-sm border border-brand-border">
             <SectionHeading title="Brief Details" />
