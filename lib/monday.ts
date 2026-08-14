@@ -2,15 +2,50 @@ import type { BriefFormData, VideoRow } from './types'
 
 const MONDAY_API = 'https://api.monday.com/v2'
 
-// Pipeline → Monday.com board ID mapping (set in Vercel env vars)
-export function getBoardId(pipeline?: string): string {
-  const map: Record<string, string | undefined> = {
-    'ORGANIC RETAINER':  process.env.MONDAY_ORGANIC_BOARD_ID,
-    'PAID ADS RETAINER': process.env.MONDAY_PAID_BOARD_ID,
-    'UGC PIPELINE':      process.env.MONDAY_UGC_BOARD_ID,
-    'PROPERTY VIDEO':    process.env.MONDAY_PROPERTY_BOARD_ID,
+// Pipeline → Monday.com board ID mapping. Env vars still win if set;
+// otherwise we auto-discover a board whose name matches the pipeline keyword.
+const PIPELINE_ENV: Record<string, string | undefined> = {
+  'ORGANIC RETAINER':  process.env.MONDAY_ORGANIC_BOARD_ID,
+  'PAID ADS RETAINER': process.env.MONDAY_PAID_BOARD_ID,
+  'UGC PIPELINE':      process.env.MONDAY_UGC_BOARD_ID,
+  'PROPERTY VIDEO':    process.env.MONDAY_PROPERTY_BOARD_ID,
+}
+const PIPELINE_KEYWORD: Record<string, RegExp> = {
+  'ORGANIC RETAINER':  /organic/i,
+  'PAID ADS RETAINER': /paid/i,
+  'UGC PIPELINE':      /ugc/i,
+  'PROPERTY VIDEO':    /property|real\s*estate/i,
+}
+const boardIdCache = new Map<string, string>()
+
+export async function resolveBoardId(pipeline?: string): Promise<string> {
+  const key = pipeline ?? ''
+  const envValue = PIPELINE_ENV[key]
+  if (envValue) return envValue
+  if (boardIdCache.has(key)) return boardIdCache.get(key)!
+  const keyword = PIPELINE_KEYWORD[key]
+  if (!keyword) {
+    return process.env.MONDAY_ORGANIC_BOARD_ID || ''
   }
-  return (pipeline && map[pipeline]) || process.env.MONDAY_ORGANIC_BOARD_ID || ''
+  try {
+    const data = await gql(`query { boards(limit: 100) { id name state } }`)
+    const boards: Array<{ id: string; name: string; state: string }> = data.boards ?? []
+    const match = boards.find(b => b.state === 'active' && keyword.test(b.name))
+    if (!match) {
+      console.warn(`[monday] resolveBoardId: no active board matched keyword ${keyword} for pipeline "${pipeline}". Set MONDAY_PAID_BOARD_ID etc. or rename the board.`)
+      return process.env.MONDAY_ORGANIC_BOARD_ID || ''
+    }
+    boardIdCache.set(key, match.id)
+    return match.id
+  } catch (err) {
+    console.error('[monday] resolveBoardId failed:', err)
+    return process.env.MONDAY_ORGANIC_BOARD_ID || ''
+  }
+}
+
+// Kept for any legacy synchronous callers — prefer resolveBoardId.
+export function getBoardId(pipeline?: string): string {
+  return (pipeline && PIPELINE_ENV[pipeline]) || process.env.MONDAY_ORGANIC_BOARD_ID || ''
 }
 
 export const MONDAY_STATUS_MAP: Record<string, string> = {
@@ -46,13 +81,7 @@ async function gql(queryStr: string) {
 }
 
 function buildColumnValues(overrides: Record<string, unknown> = {}): string {
-  const vals: Record<string, unknown> = { ...overrides }
-  // Default status to "Editing" if a status column is configured and no explicit override was supplied
-  const statusCol = process.env.MONDAY_STATUS_COL_ID
-  if (statusCol && !(statusCol in vals)) {
-    vals[statusCol] = { label: 'Editing' }
-  }
-  return JSON.stringify(vals)
+  return JSON.stringify(overrides)
 }
 
 // Converts YYYY-MM (e.g. "2026-08") to "August 2026" for group name matching
@@ -179,13 +208,34 @@ function isConnectBoardsMismatch(err: unknown): boolean {
   return /not in the connected boards/i.test(msg)
 }
 
-// Auto-discovers the people/owner column on a board so users don't have to
-// configure MONDAY_OWNER_COL_ID manually. Cached per board.
-const ownerColumnCache = new Map<string, string | null>()
-async function resolveOwnerColumnId(boardId: string): Promise<string | null> {
-  if (process.env.MONDAY_OWNER_COL_ID) return process.env.MONDAY_OWNER_COL_ID
-  if (!boardId) return null
-  if (ownerColumnCache.has(boardId)) return ownerColumnCache.get(boardId) ?? null
+// Auto-discovers key columns on a board (owner, date, status, client) so
+// users don't have to configure MONDAY_*_COL_ID env vars manually. Env vars
+// still win if set. Cached per board.
+type BoardColumns = { owner: string | null; date: string | null; status: string | null; client: string | null }
+const boardColumnsCache = new Map<string, BoardColumns>()
+
+function pickColumn(
+  cols: Array<{ id: string; title: string; type: string }>,
+  type: string,
+  titleRegex: RegExp,
+): string | null {
+  return (
+    cols.find(c => c.type === type && titleRegex.test(c.title))?.id ??
+    cols.find(c => c.type === type)?.id ??
+    null
+  )
+}
+
+export async function resolveBoardColumns(boardId: string): Promise<BoardColumns> {
+  const env: BoardColumns = {
+    owner:  process.env.MONDAY_OWNER_COL_ID  ?? null,
+    date:   process.env.MONDAY_DATE_COL_ID   ?? null,
+    status: process.env.MONDAY_STATUS_COL_ID ?? null,
+    client: process.env.MONDAY_CLIENT_COL_ID ?? null,
+  }
+  if (env.owner && env.date && env.status && env.client) return env
+  if (!boardId) return env
+  if (boardColumnsCache.has(boardId)) return boardColumnsCache.get(boardId)!
   try {
     const data = await gql(`
       query {
@@ -194,19 +244,22 @@ async function resolveOwnerColumnId(boardId: string): Promise<string | null> {
         }
       }
     `)
-    const columns: Array<{ id: string; title: string; type: string }> = data.boards?.[0]?.columns ?? []
-    const owner =
-      columns.find(c => c.type === 'people' && /owner/i.test(c.title)) ??
-      columns.find(c => c.type === 'people')
-    const colId = owner?.id ?? null
-    ownerColumnCache.set(boardId, colId)
-    if (!colId) {
-      console.warn(`[monday] No people-type column found on board ${boardId}. Add a People column to the board to enable owner assignment.`)
+    const cols: Array<{ id: string; title: string; type: string }> = data.boards?.[0]?.columns ?? []
+    const resolved: BoardColumns = {
+      owner:  env.owner  ?? pickColumn(cols, 'people', /owner|person|assign/i),
+      date:   env.date   ?? pickColumn(cols, 'date', /due|deadline|date/i),
+      status: env.status ?? pickColumn(cols, 'status', /status/i),
+      client: env.client ?? pickColumn(cols, 'board_relation', /client|customer|brand/i),
     }
-    return colId
+    boardColumnsCache.set(boardId, resolved)
+    const missing = (Object.keys(resolved) as Array<keyof BoardColumns>).filter(k => !resolved[k])
+    if (missing.length > 0) {
+      console.warn(`[monday] Board ${boardId} missing columns for: ${missing.join(', ')}. Add the corresponding column types on that board.`)
+    }
+    return resolved
   } catch (err) {
-    console.error('[monday] resolveOwnerColumnId failed:', err)
-    return null
+    console.error('[monday] resolveBoardColumns failed:', err)
+    return env
   }
 }
 
@@ -217,8 +270,8 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
   description: string
   boardId: string
 }> {
-  const boardId = getBoardId(brief.pipeline)
-  if (!boardId) throw new Error('MONDAY_ORGANIC_BOARD_ID not configured')
+  const boardId = await resolveBoardId(brief.pipeline)
+  if (!boardId) throw new Error('No Monday.com board could be resolved for this pipeline. Set MONDAY_ORGANIC_BOARD_ID or ensure a matching board exists.')
 
   // Prefer the first video's hook as the task name, then its content pillar
   const firstHook = brief.videos?.[0]?.hook?.trim()
@@ -228,9 +281,7 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
   const itemName = topic || `Shoot — ${brief.shootDate}`
   const description = briefDescription(brief)
 
-  const dateCol = process.env.MONDAY_DATE_COL_ID
-  const clientCol = process.env.MONDAY_CLIENT_COL_ID
-  const ownerCol = await resolveOwnerColumnId(boardId)
+  const { owner: ownerCol, date: dateCol, status: statusCol, client: clientCol } = await resolveBoardColumns(boardId)
   const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
   const groupClause = targetGroupId
     ? `, group_id: ${JSON.stringify(targetGroupId)}`
@@ -238,6 +289,7 @@ export async function createMondayItem(brief: BriefFormData, clientHubItemId?: s
 
   const runCreate = async (includeClient: boolean) => {
     const colVals = buildColumnValues({
+      ...(statusCol ? { [statusCol]: { label: 'Editing' } } : {}),
       ...(dateCol && brief.shootDate ? { [dateCol]: { date: brief.shootDate } } : {}),
       ...(includeClient && clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
       ...(ownerCol && ownerUserId ? { [ownerCol]: { personsAndTeams: [{ id: ownerUserId, kind: 'person' }] } } : {}),
@@ -293,9 +345,7 @@ export async function createVideoItems(
   ownerUserId?: number | null
 ): Promise<Record<string, string>> {
   const itemIds: Record<string, string> = {}
-  const dateCol   = process.env.MONDAY_DATE_COL_ID
-  const clientCol = process.env.MONDAY_CLIENT_COL_ID
-  const ownerCol  = await resolveOwnerColumnId(boardId)
+  const { owner: ownerCol, date: dateCol, status: statusCol, client: clientCol } = await resolveBoardColumns(boardId)
   const targetGroupId = groupId || process.env.MONDAY_TODO_GROUP_ID
   const groupClause = targetGroupId
     ? `, group_id: ${JSON.stringify(targetGroupId)}`
@@ -307,7 +357,8 @@ export async function createVideoItems(
     const itemName = `${label ? `${label} — ` : ''}${v.format || 'VIDEO'}${v.duration ? ` (${v.duration})` : ''}`
 
     const buildVals = (includeClient: boolean) => buildColumnValues({
-      ...(dateCol && v.deadline   ? { [dateCol]: { date: v.deadline } } : {}),
+      ...(statusCol ? { [statusCol]: { label: 'Editing' } } : {}),
+      ...(dateCol && (v.deadline || brief?.shootDate) ? { [dateCol]: { date: v.deadline || brief!.shootDate } } : {}),
       ...(includeClient && clientCol && clientHubItemId ? { [clientCol]: { item_ids: [Number(clientHubItemId)] } } : {}),
       ...(ownerCol && ownerUserId ? { [ownerCol]: { personsAndTeams: [{ id: ownerUserId, kind: 'person' }] } } : {}),
     })
@@ -372,8 +423,9 @@ export async function createVideoItems(
 
 // Updates a video item's status column
 export async function updateMondayStatus(itemId: string, boardId: string, label: string): Promise<void> {
-  const colId = process.env.MONDAY_STATUS_COL_ID
-  if (!colId || !boardId) return
+  if (!boardId) return
+  const { status: colId } = await resolveBoardColumns(boardId)
+  if (!colId) return
   try {
     await gql(`
       mutation {

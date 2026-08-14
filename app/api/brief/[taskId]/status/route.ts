@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRedis } from '@/lib/redis'
-import { updateMondayStatus, MONDAY_STATUS_MAP } from '@/lib/monday'
+import { updateMondayStatus, MONDAY_STATUS_MAP, resolveBoardId } from '@/lib/monday'
 import type { BriefStatus, StoredBrief } from '@/lib/types'
-
-function getBoardId(pipeline?: string): string {
-  const map: Record<string, string | undefined> = {
-    'ORGANIC RETAINER':  process.env.MONDAY_ORGANIC_BOARD_ID,
-    'PAID ADS RETAINER': process.env.MONDAY_PAID_BOARD_ID,
-    'UGC PIPELINE':      process.env.MONDAY_UGC_BOARD_ID,
-    'PROPERTY VIDEO':    process.env.MONDAY_PROPERTY_BOARD_ID,
-  }
-  return (pipeline && map[pipeline]) || process.env.MONDAY_ORGANIC_BOARD_ID || ''
-}
 
 const VALID_STATUSES: BriefStatus[] = ['not-started', 'in-edit', 'amendments', 'in-review', 'approved', 'scheduled']
 
@@ -63,7 +53,7 @@ export async function POST(
 
   // Sync status to Monday.com video item in background
   const subtaskId = stored.videoSubtaskIds?.[videoId]
-  const boardId = getBoardId(stored.brief.pipeline)
+  const boardId = await resolveBoardId(stored.brief.pipeline)
   if (subtaskId && boardId) {
     updateMondayStatus(subtaskId, boardId, MONDAY_STATUS_MAP[status]).catch(console.error)
   }

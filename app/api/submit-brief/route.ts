@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createMondayItem, addBriefComment, createVideoItems, findClientHubItemId, findMonthGroupId, findMondayUserId, getBoardId } from '@/lib/monday'
+import { createMondayItem, addBriefComment, createVideoItems, findClientHubItemId, findMonthGroupId, findMondayUserId, resolveBoardId } from '@/lib/monday'
 import { getRedis } from '@/lib/redis'
 import type { SubmitBriefPayload, SubmitBriefResponse, StoredBrief, BriefStatus, ClientProfile } from '@/lib/types'
 
@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
 
     // Fall back to shoot date's month if publicationMonth isn't set
     const publicationMonth = brief.publicationMonth || (brief.shootDate ? brief.shootDate.slice(0, 7) : '')
-    const boardId = getBoardId(brief.pipeline)
+    const boardId = await resolveBoardId(brief.pipeline)
+    console.log(`[submit-brief] pipeline="${brief.pipeline}" boardId=${boardId} client="${brief.client}" shootDate=${brief.shootDate} videos=${brief.videos.length}`)
 
     // Look up client + target month group + owner user in parallel
     const [clientHubItemId, groupId, ownerUserId] = await Promise.all([
