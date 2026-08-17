@@ -216,9 +216,18 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
               </h1>
               <p className="mt-1 text-sm text-gray-500">Content Calendar — {MONTHS[viewMonth]} {viewYear}</p>
             </div>
-            <div className="text-right hidden sm:block">
-              <p className="text-xl font-black text-gray-800">{totalThisMonth} POSTS</p>
-              {formatSummary && <p className="text-xs text-gray-400 mt-0.5">{formatSummary}</p>}
+            <div className="hidden sm:flex flex-col items-end gap-1.5">
+              <div className="rounded-2xl bg-[#4f1c1e] px-4 py-2.5 shadow-sm">
+                <p className="text-2xl font-black text-[#efff72] leading-none tracking-tight">
+                  {totalThisMonth}
+                  <span className="ml-1.5 text-xs font-bold tracking-widest opacity-80">POSTS</span>
+                </p>
+              </div>
+              {formatSummary && (
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">
+                  {formatSummary}
+                </p>
+              )}
             </div>
           </div>
           <div className="mt-4 h-px bg-gray-300" />
