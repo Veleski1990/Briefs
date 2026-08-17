@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRedis } from '@/lib/redis'
-import type { CalendarPost } from '@/lib/calendar-types'
+import type { CalendarPost, Platform } from '@/lib/calendar-types'
 
 const TTL = 60 * 60 * 24 * 365 // 1 year
 
 function postsKey(slug: string) { return `calendar:${slug}` }
+
+function migratePost(p: CalendarPost): CalendarPost {
+  if (!p.platforms || p.platforms.length === 0) {
+    return { ...p, platforms: ['instagram'] as Platform[] }
+  }
+  return p
+}
 
 export async function GET(
   _req: NextRequest,
@@ -15,7 +22,8 @@ export async function GET(
   if (!redis) return NextResponse.json([], { status: 200 })
   const raw = await redis.get(postsKey(clientSlug))
   await redis.quit()
-  return NextResponse.json(raw ? JSON.parse(raw) : [])
+  const posts: CalendarPost[] = raw ? JSON.parse(raw) : []
+  return NextResponse.json(posts.map(migratePost))
 }
 
 export async function POST(

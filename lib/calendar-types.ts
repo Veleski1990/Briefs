@@ -1,6 +1,15 @@
 export type PostFormat = 'REEL' | 'SHORT-FORM' | 'STATIC' | 'CAROUSEL' | 'STORY' | 'VSL'
 export type PostStatus = 'draft' | 'pending' | 'approved' | 'changes-requested' | 'scheduled'
 export type PostCategory = 'founder' | 'product' | 'lifestyle' | 'educational' | 'testimonial' | 'promotional' | 'other'
+export type Platform = 'instagram' | 'facebook' | 'tiktok'
+
+export const PLATFORMS: Platform[] = ['instagram', 'facebook', 'tiktok']
+
+export const PLATFORM_META: Record<Platform, { label: string; short: string; bg: string; text: string }> = {
+  instagram: { label: 'Instagram', short: 'IG', bg: 'bg-pink-500', text: 'text-white' },
+  facebook:  { label: 'Facebook',  short: 'FB', bg: 'bg-blue-600', text: 'text-white' },
+  tiktok:    { label: 'TikTok',    short: 'TT', bg: 'bg-black',    text: 'text-white' },
+}
 
 export interface CalendarPost {
   id: string
@@ -8,6 +17,7 @@ export interface CalendarPost {
   title: string
   format: PostFormat
   category: PostCategory
+  platforms?: Platform[]  // which platforms this post is going to; defaults to ['instagram'] for legacy posts
   scheduledDate: string   // YYYY-MM-DD
   previewUrl?: string     // direct image/video URL or Frame.io review link
   caption?: string        // post caption / copy to show client
@@ -17,6 +27,11 @@ export interface CalendarPost {
   respondedAt?: string    // ISO timestamp of last client approval/rejection
   createdAt: string
   briefTaskId?: string    // optional link back to a brief
+}
+
+// Backward-compat: existing posts without a platforms field are Instagram-only.
+export function postPlatforms(post: Pick<CalendarPost, 'platforms'>): Platform[] {
+  return post.platforms && post.platforms.length > 0 ? post.platforms : ['instagram']
 }
 
 export const CATEGORY_COLOURS: Record<PostCategory, { bg: string; text: string; dot: string }> = {

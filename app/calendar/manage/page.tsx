@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 const PAID_MEDIA_EXCLUDE = new Set(['FULFILMENT AUS', 'YTSS', 'FLO BUYERS AGENTS'])
-import { clientToSlug, slugToDisplay, STATUS_COLOURS, STATUS_STYLES } from '@/lib/calendar-types'
+import { clientToSlug, slugToDisplay, STATUS_COLOURS, STATUS_STYLES, PLATFORM_META, PLATFORMS, postPlatforms } from '@/lib/calendar-types'
 import ScheduleGenerator from './ScheduleGenerator'
-import type { CalendarPost, PostFormat, PostCategory, PostStatus } from '@/lib/calendar-types'
+import type { CalendarPost, PostFormat, PostCategory, PostStatus, Platform } from '@/lib/calendar-types'
 import { normalizeExternalUrl } from '@/lib/url'
 
 // ── Mini calendar preview (same grid logic as client page) ──
@@ -113,6 +113,7 @@ function emptyPost(clientSlug: string): Omit<CalendarPost, 'id' | 'createdAt'> {
     title: '',
     format: 'REEL',
     category: 'lifestyle',
+    platforms: ['instagram'],
     scheduledDate: '',
     previewUrl: '',
     caption: '',
@@ -419,6 +420,37 @@ export default function CalendarManagePage() {
                   {CATEGORIES.map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
                 </select>
               </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Platforms</label>
+                <div className="flex flex-wrap gap-2">
+                  {PLATFORMS.map((pl) => {
+                    const meta = PLATFORM_META[pl]
+                    const selected = (form.platforms ?? []).includes(pl)
+                    return (
+                      <button
+                        key={pl}
+                        type="button"
+                        onClick={() => setForm((prev) => {
+                          const current = prev.platforms ?? []
+                          const next = current.includes(pl) ? current.filter(x => x !== pl) : [...current, pl]
+                          return { ...prev, platforms: next.length > 0 ? next : ['instagram'] }
+                        })}
+                        className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
+                          selected
+                            ? 'bg-[#4f1c1e] text-[#efff72]'
+                            : 'bg-white text-gray-600 border border-gray-300 hover:border-gray-500'
+                        }`}
+                      >
+                        <span className={`inline-flex items-center justify-center rounded-sm h-4 w-4 text-[8px] font-bold ${meta.bg} ${meta.text}`}>
+                          {meta.short}
+                        </span>
+                        {meta.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="mt-1 text-[10px] text-gray-400">Select all platforms this post will be published to. At least one is required.</p>
+              </div>
               <div>
                 <label className={labelClass}>Status</label>
                 <select className={inputClass} value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as PostStatus }))}>
@@ -495,10 +527,24 @@ export default function CalendarManagePage() {
                         <span className="text-[10px] text-gray-400">{timeAgo(post.respondedAt)}</span>
                       )}
                     </div>
-                    <div className="flex gap-3 mt-0.5 text-xs text-gray-400">
+                    <div className="flex gap-3 mt-0.5 text-xs text-gray-400 items-center">
                       <span>{dateDisplay}</span>
                       <span>{post.format}</span>
                       <span className="capitalize">{post.category}</span>
+                      <span className="flex gap-0.5">
+                        {postPlatforms(post).map((pl) => {
+                          const meta = PLATFORM_META[pl]
+                          return (
+                            <span
+                              key={pl}
+                              title={meta.label}
+                              className={`inline-flex items-center justify-center rounded-sm h-3.5 w-3.5 text-[7px] font-bold ${meta.bg} ${meta.text}`}
+                            >
+                              {meta.short}
+                            </span>
+                          )
+                        })}
+                      </span>
                     </div>
                     {post.clientNote && (
                       <p className="mt-1 text-xs text-orange-600 italic">"{post.clientNote}"</p>

@@ -1,9 +1,29 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { STATUS_COLOURS, STATUS_STYLES, slugToDisplay } from '@/lib/calendar-types'
-import type { CalendarPost, PostStatus } from '@/lib/calendar-types'
+import { STATUS_COLOURS, STATUS_STYLES, slugToDisplay, PLATFORM_META, PLATFORMS, postPlatforms } from '@/lib/calendar-types'
+import type { CalendarPost, PostStatus, Platform } from '@/lib/calendar-types'
 import { normalizeExternalUrl } from '@/lib/url'
+
+function PlatformBadges({ platforms, size = 'sm' }: { platforms: Platform[]; size?: 'sm' | 'md' }) {
+  const dims = size === 'md' ? 'h-5 w-5 text-[9px]' : 'h-3.5 w-3.5 text-[7px]'
+  return (
+    <div className="flex gap-0.5">
+      {platforms.map((pl) => {
+        const meta = PLATFORM_META[pl]
+        return (
+          <span
+            key={pl}
+            title={meta.label}
+            className={`inline-flex items-center justify-center rounded-sm font-bold tracking-tight ${meta.bg} ${meta.text} ${dims}`}
+          >
+            {meta.short}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -45,6 +65,7 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all')
 
   useEffect(() => {
     params.then(({ clientSlug: slug }) => {
@@ -125,9 +146,14 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
   const weeks: (number | null)[][] = []
   for (let i = 0; i < allCells.length; i += 7) weeks.push(allCells.slice(i, i + 7))
 
+  // Apply platform filter first
+  const filteredPosts = platformFilter === 'all'
+    ? posts
+    : posts.filter((p) => postPlatforms(p).includes(platformFilter))
+
   // Posts by day
   const postsByDay: Record<number, CalendarPost[]> = {}
-  posts.forEach((p) => {
+  filteredPosts.forEach((p) => {
     const d = new Date(p.scheduledDate + 'T00:00:00')
     if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
       const day = d.getDate()
@@ -135,6 +161,15 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
       postsByDay[day].push(p)
     }
   })
+
+  // Platform counts across the whole month (unfiltered) — for chip labels
+  const monthPosts = posts.filter((p) => {
+    const d = new Date(p.scheduledDate + 'T00:00:00')
+    return d.getFullYear() === viewYear && d.getMonth() === viewMonth
+  })
+  const platformCounts: Record<Platform, number> = { instagram: 0, facebook: 0, tiktok: 0 }
+  monthPosts.forEach((p) => postPlatforms(p).forEach((pl) => platformCounts[pl]++))
+  const activePlatforms = PLATFORMS.filter((pl) => platformCounts[pl] > 0)
 
   // Stats
   const totalThisMonth = Object.values(postsByDay).flat().length
@@ -198,6 +233,48 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
             className="text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors">Next →</button>
         </div>
 
+        {/* Platform filter — only show if there's more than one platform in play this month */}
+        {activePlatforms.length > 1 && (
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setPlatformFilter('all')}
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                platformFilter === 'all'
+                  ? 'bg-[#4f1c1e] text-[#efff72]'
+                  : 'bg-white text-gray-600 border border-gray-300 hover:border-gray-500'
+              }`}
+            >
+              All
+              <span className={`text-[10px] font-bold ${platformFilter === 'all' ? 'text-[#efff72]/70' : 'text-gray-400'}`}>
+                {monthPosts.length}
+              </span>
+            </button>
+            {activePlatforms.map((pl) => {
+              const meta = PLATFORM_META[pl]
+              const active = platformFilter === pl
+              return (
+                <button
+                  key={pl}
+                  onClick={() => setPlatformFilter(pl)}
+                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    active
+                      ? 'bg-[#4f1c1e] text-[#efff72]'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  <span className={`inline-flex items-center justify-center rounded-sm h-4 w-4 text-[8px] font-bold ${meta.bg} ${meta.text}`}>
+                    {meta.short}
+                  </span>
+                  {meta.label}
+                  <span className={`text-[10px] font-bold ${active ? 'text-[#efff72]/70' : 'text-gray-400'}`}>
+                    {platformCounts[pl]}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
         {/* Legend */}
         <div className="flex flex-wrap gap-4">
           {(Object.entries(STATUS_COLOURS) as [import('@/lib/calendar-types').PostStatus, typeof STATUS_COLOURS[keyof typeof STATUS_COLOURS]][]).map(([status, c]) => (
@@ -252,7 +329,10 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
                                     onClick={() => { setSelected(post); setNoteOpen(false) }}
                                     className={`w-full text-left rounded-lg px-2 py-1.5 transition-opacity hover:opacity-75 ${sc.bg}`}
                                   >
-                                    <p className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${sc.text}`}>{post.format}</p>
+                                    <div className="flex items-start justify-between gap-1 mb-0.5">
+                                      <p className={`text-[9px] font-bold uppercase tracking-widest ${sc.text}`}>{post.format}</p>
+                                      <PlatformBadges platforms={postPlatforms(post)} />
+                                    </div>
                                     <p className={`text-[11px] font-semibold leading-tight ${sc.text}`}>{post.title}</p>
                                     <p className="text-[9px] text-gray-400 capitalize mt-0.5">{post.category}</p>
                                   </button>
@@ -285,7 +365,10 @@ export default function ClientCalendarPage({ params }: { params: Promise<{ clien
             <div className="p-5 space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{selected.format}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{selected.format}</p>
+                    <PlatformBadges platforms={postPlatforms(selected)} size="md" />
+                  </div>
                   <h3 className="text-base font-bold text-gray-900 leading-snug">{selected.title}</h3>
                   <p className="text-xs text-gray-400 mt-1">
                     {new Date(selected.scheduledDate + 'T00:00:00').toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}
