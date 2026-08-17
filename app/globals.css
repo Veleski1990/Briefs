@@ -10,6 +10,9 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Bumped from browser default 16px so the whole system reads a bit larger.
+       Tailwind uses rem, so text + spacing scale together like a mild zoom. */
+    font-size: 17.5px;
   }
 
   body {
